@@ -92,8 +92,19 @@ h3 {
   background: #1e293b;
   border: 1px solid #fb7185;
   border-radius: 0.75rem;
-  max-width: 40rem;
   padding: 1.25rem;
+  width: min(100%, 40rem);
+}
+
+.confirm-backdrop {
+  align-items: center;
+  background: rgb(2 6 23 / 75%);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1.5rem;
+  position: fixed;
+  z-index: 10;
 }
 
 form,

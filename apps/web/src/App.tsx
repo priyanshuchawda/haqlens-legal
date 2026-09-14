@@ -254,25 +254,27 @@ export function App() {
         </button>
       </section>
       {confirmClear ? (
-        <section
-          aria-describedby="clear-session-detail"
-          aria-labelledby="clear-session-title"
-          aria-modal="true"
-          className="confirm-dialog"
-          role="alertdialog"
-        >
-          <h2 id="clear-session-title">Clear all local session data?</h2>
-          <p id="clear-session-detail">
-            This immediately discards the evidence, reviewed facts, and preparation result currently
-            held in this browser.
-          </p>
-          <button ref={clearAllDataButton} type="button" onClick={clearSession}>
-            Clear all local data
-          </button>{' '}
-          <button ref={keepWorkingButton} type="button" onClick={() => setConfirmClear(false)}>
-            Keep working
-          </button>
-        </section>
+        <div className="confirm-backdrop">
+          <section
+            aria-describedby="clear-session-detail"
+            aria-labelledby="clear-session-title"
+            aria-modal="true"
+            className="confirm-dialog"
+            role="alertdialog"
+          >
+            <h2 id="clear-session-title">Clear all local session data?</h2>
+            <p id="clear-session-detail">
+              This immediately discards the evidence, reviewed facts, and preparation result
+              currently held in this browser.
+            </p>
+            <button ref={clearAllDataButton} type="button" onClick={clearSession}>
+              Clear all local data
+            </button>{' '}
+            <button ref={keepWorkingButton} type="button" onClick={() => setConfirmClear(false)}>
+              Keep working
+            </button>
+          </section>
+        </div>
       ) : null}
       <section aria-labelledby="evidence-title" className="workspace">
         <div>
