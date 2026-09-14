@@ -336,3 +336,14 @@ test('has no detectable baseline accessibility violations', async ({ page }) => 
 
   expect(result.violations).toEqual([]);
 });
+
+test('has no detectable accessibility violations in the clear-session confirmation', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Clear this session' }).click();
+
+  const result = await new AxeBuilder({ page }).analyze();
+
+  expect(result.violations).toEqual([]);
+});
