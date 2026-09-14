@@ -15,6 +15,10 @@
     "noEmit": true,
     "types": ["bun"]
   },
-  "references": [{ "path": "../../packages/contracts" }, { "path": "../../packages/core" }],
+  "references": [
+    { "path": "../../packages/ai-gemini" },
+    { "path": "../../packages/contracts" },
+    { "path": "../../packages/core" }
+  ],
   "include": ["src/**/*.ts"]
 }

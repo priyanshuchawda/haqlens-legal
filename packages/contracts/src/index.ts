@@ -67,6 +67,37 @@ export const routeStatusSchema = z.enum([
   'safe_preparation_route',
 ]);
 
+export const factExtractionInputSchema = z
+  .object({
+    evidence: z.array(evidenceSchema).min(1).max(20),
+  })
+  .strict();
+
+export const factExtractionOutputSchema = z
+  .object({
+    facts: z.array(caseFactSchema).max(30),
+  })
+  .strict();
+
+export const extractionSourceSchema = z.enum(['fixture', 'gemini']);
+
+export const extractionSuccessSchema = z
+  .object({
+    source: extractionSourceSchema,
+    safeMode: z.literal(false),
+    facts: z.array(caseFactSchema).max(30),
+  })
+  .strict();
+
+export const extractionSafeModeSchema = z
+  .object({
+    source: z.enum(['disabled', 'gemini']),
+    safeMode: z.literal(true),
+    error: z.literal('rule_only_safe_mode'),
+    facts: z.array(caseFactSchema).length(0),
+  })
+  .strict();
+
 export const routeActionSchema = z.discriminatedUnion('basis', [
   z
     .object({
@@ -106,5 +137,6 @@ export const routeDecisionSchema = z
 export type CaseFact = z.infer<typeof caseFactSchema>;
 export type CaseInput = z.infer<typeof caseInputSchema>;
 export type Evidence = z.infer<typeof evidenceSchema>;
+export type ExtractionResult = z.infer<typeof factExtractionOutputSchema>;
 export type FactKey = z.infer<typeof factKeySchema>;
 export type RouteDecision = z.infer<typeof routeDecisionSchema>;
