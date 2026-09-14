@@ -62,7 +62,8 @@ function isFact(value: unknown): value is Fact {
       fact.certainty === 'uncertain' ||
       fact.certainty === 'conflicting') &&
     Array.isArray(fact.evidenceIds) &&
-    fact.evidenceIds.every((id) => typeof id === 'string')
+    fact.evidenceIds.every((id) => typeof id === 'string') &&
+    new Set(fact.evidenceIds).size === fact.evidenceIds.length
   );
 }
 

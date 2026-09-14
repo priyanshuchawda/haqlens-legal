@@ -33,7 +33,13 @@ export const caseFactSchema = z
     key: factKeySchema,
     value: z.string().trim().min(1).max(500),
     certainty: factCertaintySchema,
-    evidenceIds: z.array(z.string().min(1).max(128)).min(1).max(10),
+    evidenceIds: z
+      .array(z.string().min(1).max(128))
+      .min(1)
+      .max(10)
+      .refine((ids) => new Set(ids).size === ids.length, {
+        message: 'A fact must not repeat an evidence ID.',
+      }),
   })
   .strict();
 
@@ -45,6 +51,14 @@ export const caseInputSchema = z
   .strict()
   .superRefine((input, context) => {
     const evidenceIds = new Set(input.evidence.map((item) => item.id));
+
+    if (evidenceIds.size !== input.evidence.length) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Evidence IDs must be unique.',
+        path: ['evidence'],
+      });
+    }
 
     for (const [index, fact] of input.facts.entries()) {
       for (const evidenceId of fact.evidenceIds) {
@@ -71,7 +85,16 @@ export const factExtractionInputSchema = z
   .object({
     evidence: z.array(evidenceSchema).min(1).max(20),
   })
-  .strict();
+  .strict()
+  .superRefine((input, context) => {
+    if (new Set(input.evidence.map((item) => item.id)).size === input.evidence.length) return;
+
+    context.addIssue({
+      code: 'custom',
+      message: 'Evidence IDs must be unique.',
+      path: ['evidence'],
+    });
+  });
 
 export const factExtractionOutputSchema = z
   .object({
