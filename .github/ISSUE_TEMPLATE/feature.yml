@@ -1,0 +1,26 @@
+name: Feature slice
+description: Define one independently testable vertical slice.
+title: '[Feature]: '
+labels: ['feature']
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: User outcome
+      description: State the observable user value.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Include success, failure, security, and accessibility paths.
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and boundaries
+      description: Include privacy, legal-safety, and rollback considerations.
+    validations:
+      required: true

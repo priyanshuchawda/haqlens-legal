@@ -1,0 +1,14 @@
+{
+  "name": "@h2s/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/server.ts --outdir dist --target bun",
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts"
+  },
+  "dependencies": {
+    "hono": "4.13.7",
+    "zod": "4.6.5"
+  }
+}
