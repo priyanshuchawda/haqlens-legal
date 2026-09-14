@@ -162,4 +162,33 @@ describe('App component', () => {
       fetchSpy.restore();
     }
   });
+
+  test('shows bounded retry guidance without rendering a rate-limit payload', async () => {
+    const user = userEvent.setup();
+    const fetchSpy = spyOnFetch(
+      async () =>
+        new Response('provider payload must stay private', {
+          headers: { 'retry-after': '12' },
+          status: 429,
+        }),
+    );
+
+    try {
+      render(<App />);
+      await user.type(screen.getByLabelText('Source label'), 'Termination email');
+      await user.type(screen.getByLabelText('Evidence excerpt'), 'Employment ended today.');
+      await user.click(screen.getByRole('button', { name: 'Extract facts for review' }));
+
+      expect(
+        await screen.findByRole('heading', { name: 'Please wait before trying again' }),
+      ).toBeDefined();
+      expect(
+        screen.getByText('Try again in about 12 seconds. No facts were generated.'),
+      ).toBeDefined();
+      expect(screen.queryByText('provider payload must stay private')).toBeNull();
+      expect(fetchSpy.requests()).toBe(1);
+    } finally {
+      fetchSpy.restore();
+    }
+  });
 });
