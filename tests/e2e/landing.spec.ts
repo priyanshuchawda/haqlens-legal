@@ -122,6 +122,42 @@ test('gives bounded retry guidance when extraction is rate limited', async ({ pa
   await expect(page.getByRole('status')).toContainText('No facts were generated.');
 });
 
+test('gives bounded retry guidance when routing is rate limited', async ({ page }) => {
+  await page.route('**/v1/extractions/facts', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        source: 'fixture',
+        safeMode: false,
+        facts: [
+          ['case_category', 'termination'],
+          ['jurisdiction_country', 'India'],
+          ['jurisdiction_state', 'Maharashtra'],
+          ['worker_type', 'employee'],
+          ['event_date', '2026-02-10'],
+        ].map(([key, value]) => ({
+          key,
+          value,
+          certainty: 'confirmed',
+          evidenceIds: ['evidence-1'],
+        })),
+      }),
+    }),
+  );
+  await page.route('**/v1/routes/prepare', (route) =>
+    route.fulfill({ status: 429, headers: { 'retry-after': '60' }, body: '{}' }),
+  );
+  await page.goto('/');
+  await page.getByLabel('Source label').fill('Synthetic termination email');
+  await page
+    .getByRole('textbox', { name: 'Evidence excerpt' })
+    .fill('Employment ended on 2026-02-10.');
+  await page.getByRole('button', { name: 'Extract facts for review' }).click();
+  await page.getByRole('button', { name: 'Check preparation path' }).click();
+  await expect(page.getByRole('status')).toContainText('Try again in about 60 seconds');
+  await expect(page.getByRole('status')).toContainText('No preparation path was generated.');
+});
+
 test('requires reviewed facts and renders the deterministic preparation route', async ({
   page,
 }) => {
