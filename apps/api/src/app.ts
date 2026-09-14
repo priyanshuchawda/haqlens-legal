@@ -42,8 +42,9 @@ function hasResponse(result: ParsedJson): result is Readonly<{ response: Respons
 
 async function parseBoundedJson(context: Context): Promise<ParsedJson> {
   const contentType = context.req.header('content-type')?.toLocaleLowerCase('en-US');
+  const mediaType = contentType?.split(';', 1)[0]?.trim();
 
-  if (contentType?.startsWith('application/json') !== true) {
+  if (mediaType !== 'application/json') {
     return { response: context.json({ error: 'unsupported_media_type' }, 415) };
   }
 
