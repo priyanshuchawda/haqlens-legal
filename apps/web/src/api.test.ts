@@ -3,6 +3,7 @@ import {
   extractionFromResponse,
   normaliseEvidenceText,
   privateJsonRequest,
+  retryAfterSeconds,
   routeFromResponse,
 } from './api';
 
@@ -19,6 +20,15 @@ describe('untrusted browser API parsers', () => {
   test('normalises newlines while rejecting unsafe control characters', () => {
     expect(normaliseEvidenceText('  first\r\nsecond\rthird  ')).toBe('first\nsecond\nthird');
     expect(normaliseEvidenceText('unsafe\u0000text')).toBeNull();
+  });
+
+  test('reads only bounded retry guidance from rate-limited responses', () => {
+    expect(
+      retryAfterSeconds(new Response('', { status: 429, headers: { 'retry-after': '60' } })),
+    ).toBe(60);
+    expect(
+      retryAfterSeconds(new Response('', { status: 429, headers: { 'retry-after': '9999' } })),
+    ).toBeNull();
   });
 
   test('accepts only contract-shaped extraction responses', () => {

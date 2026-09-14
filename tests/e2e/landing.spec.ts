@@ -110,6 +110,18 @@ test('fails closed in the interface when extraction is unavailable', async ({ pa
   await expect(page.getByText('We have not generated facts from this excerpt.')).toBeVisible();
 });
 
+test('gives bounded retry guidance when extraction is rate limited', async ({ page }) => {
+  await page.route('**/v1/extractions/facts', (route) =>
+    route.fulfill({ status: 429, headers: { 'retry-after': '60' }, body: '{}' }),
+  );
+  await page.goto('/');
+  await page.getByLabel('Source label').fill('Synthetic source');
+  await page.getByRole('textbox', { name: 'Evidence excerpt' }).fill('Synthetic excerpt.');
+  await page.getByRole('button', { name: 'Extract facts for review' }).click();
+  await expect(page.getByRole('status')).toContainText('Try again in about 60 seconds');
+  await expect(page.getByRole('status')).toContainText('No facts were generated.');
+});
+
 test('requires reviewed facts and renders the deterministic preparation route', async ({
   page,
 }) => {
