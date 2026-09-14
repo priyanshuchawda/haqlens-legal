@@ -82,6 +82,20 @@ h3 {
   padding-left: 1rem;
 }
 
+.clear-session {
+  background: transparent;
+  border: 1px solid #fb7185;
+  color: #fecdd3;
+}
+
+.confirm-dialog {
+  background: #1e293b;
+  border: 1px solid #fb7185;
+  border-radius: 0.75rem;
+  max-width: 40rem;
+  padding: 1.25rem;
+}
+
 form,
 .field {
   display: grid;

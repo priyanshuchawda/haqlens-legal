@@ -23,6 +23,7 @@ export function App() {
   const [route, setRoute] = useState<RouteDecision | null>(null);
   const [routeState, setRouteState] = useState<RouteState>('idle');
   const [formError, setFormError] = useState('');
+  const [confirmClear, setConfirmClear] = useState(false);
   const extractionController = useRef<AbortController | null>(null);
   const routeController = useRef<AbortController | null>(null);
   const extractionGeneration = useRef(0);
@@ -107,6 +108,13 @@ export function App() {
     setFacts([]);
     setSource(null);
   }
+  function clearSession() {
+    invalidateEvidenceResults();
+    setEvidenceDrafts([{ id: 'evidence-1', sourceLabel: '', excerpt: '' }]);
+    setNextEvidenceId(2);
+    setFormError('');
+    setConfirmClear(false);
+  }
   async function submitRoute() {
     if (!facts.length || facts.some((fact) => !fact.value.trim())) {
       setFormError('Add a value to every fact you want to check, or remove it.');
@@ -154,7 +162,30 @@ export function App() {
           This tool provides legal information and preparation support, not legal advice. Your text
           is held only in this browser while you use this page; document upload is not enabled.
         </p>
+        <button className="clear-session" type="button" onClick={() => setConfirmClear(true)}>
+          Clear this session
+        </button>
       </section>
+      {confirmClear ? (
+        <section
+          aria-describedby="clear-session-detail"
+          aria-labelledby="clear-session-title"
+          className="confirm-dialog"
+          role="alertdialog"
+        >
+          <h2 id="clear-session-title">Clear all local session data?</h2>
+          <p id="clear-session-detail">
+            This immediately discards the evidence, reviewed facts, and preparation result currently
+            held in this browser.
+          </p>
+          <button type="button" onClick={clearSession}>
+            Clear all local data
+          </button>{' '}
+          <button type="button" onClick={() => setConfirmClear(false)}>
+            Keep working
+          </button>
+        </section>
+      ) : null}
       <section aria-labelledby="evidence-title" className="workspace">
         <div>
           <p className="eyebrow">Step 1 of 3</p>
