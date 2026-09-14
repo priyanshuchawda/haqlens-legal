@@ -87,9 +87,24 @@ export function extractionFromResponse(
   return { source: response.source, facts: response.facts };
 }
 
+function isRouteAction(value: unknown): value is Readonly<{ id: string; label: string }> {
+  if (typeof value !== 'object' || value === null) return false;
+  const action = value as Record<string, unknown>;
+  return (
+    typeof action.id === 'string' &&
+    action.id.length >= 1 &&
+    action.id.length <= 128 &&
+    typeof action.label === 'string' &&
+    action.label.length >= 1 &&
+    action.label.length <= 500
+  );
+}
+
 export function routeFromResponse(value: unknown): RouteDecision | null {
   if (typeof value !== 'object' || value === null) return null;
   const response = value as Record<string, unknown>;
+  const actions = response.actions;
+  const missingFacts = response.missingFacts;
   const statuses: readonly RouteDecision['status'][] = [
     'urgent_safety_exit',
     'human_review_required',
@@ -100,24 +115,20 @@ export function routeFromResponse(value: unknown): RouteDecision | null {
   if (
     !statuses.includes(response.status as RouteDecision['status']) ||
     typeof response.ruleId !== 'string' ||
-    !Array.isArray(response.actions) ||
-    !Array.isArray(response.missingFacts)
+    response.ruleId.length < 1 ||
+    response.ruleId.length > 128 ||
+    !Array.isArray(actions) ||
+    actions.length < 1 ||
+    actions.length > 10 ||
+    !Array.isArray(missingFacts)
   )
     return null;
+  if (!actions.every(isRouteAction)) return null;
   if (
-    !response.actions.every(
-      (action) =>
-        typeof action === 'object' &&
-        action !== null &&
-        typeof (action as Record<string, unknown>).id === 'string' &&
-        typeof (action as Record<string, unknown>).label === 'string',
-    )
-  )
-    return null;
-  if (
-    !response.missingFacts.every(
-      (key) => typeof key === 'string' && factKeys.includes(key as FactKey),
-    )
+    missingFacts.length > 6 ||
+    !missingFacts.every((key) => typeof key === 'string' && factKeys.includes(key as FactKey)) ||
+    new Set(actions.map((action) => action.id)).size !== actions.length ||
+    new Set(missingFacts).size !== missingFacts.length
   )
     return null;
   return response as RouteDecision;

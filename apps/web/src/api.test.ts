@@ -117,5 +117,24 @@ describe('untrusted browser API parsers', () => {
         missingFacts: [],
       }),
     ).toBeNull();
+    expect(
+      routeFromResponse({
+        status: 'safe_preparation_route',
+        ruleId: 'x'.repeat(129),
+        actions: [{ id: 'preserve', label: 'Preserve originals' }],
+        missingFacts: [],
+      }),
+    ).toBeNull();
+    expect(
+      routeFromResponse({
+        status: 'safe_preparation_route',
+        ruleId: 'scope.termination.preparation',
+        actions: [
+          { id: 'preserve', label: 'Preserve originals' },
+          { id: 'preserve', label: 'Preserve duplicates' },
+        ],
+        missingFacts: [],
+      }),
+    ).toBeNull();
   });
 });
