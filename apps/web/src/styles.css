@@ -191,6 +191,11 @@ button:disabled {
   margin-bottom: 0;
 }
 
+.fact-sources label {
+  display: block;
+  margin: 0.4rem 0;
+}
+
 .fact-card label {
   display: grid;
   gap: 0.35rem;

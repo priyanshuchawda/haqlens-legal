@@ -115,8 +115,10 @@ export function App() {
     setConfirmClear(false);
   }
   async function submitRoute() {
-    if (!facts.length || facts.some((fact) => !fact.value.trim())) {
-      setFormError('Add a value to every fact you want to check, or remove it.');
+    if (!facts.length || facts.some((fact) => !fact.value.trim() || !fact.evidenceIds.length)) {
+      setFormError(
+        'Add a value and at least one source to every fact you want to check, or remove it.',
+      );
       return;
     }
     routeController.current?.abort();
@@ -305,6 +307,25 @@ export function App() {
                       <option value="conflicting">conflicting</option>
                     </select>
                   </label>
+                  <fieldset className="fact-sources">
+                    <legend>Sources for this fact</legend>
+                    {evidence.map((item) => (
+                      <label key={item.id}>
+                        <input
+                          checked={fact.evidenceIds.includes(item.id)}
+                          onChange={(event) =>
+                            updateFact(index, {
+                              evidenceIds: event.target.checked
+                                ? [...fact.evidenceIds, item.id]
+                                : fact.evidenceIds.filter((id) => id !== item.id),
+                            })
+                          }
+                          type="checkbox"
+                        />{' '}
+                        {item.sourceLabel || `Evidence ${item.id}`}
+                      </label>
+                    ))}
+                  </fieldset>
                   <button
                     type="button"
                     onClick={() =>
@@ -313,12 +334,6 @@ export function App() {
                   >
                     Remove fact {index + 1}
                   </button>
-                  <p className="fact-sources">
-                    Sources:{' '}
-                    {fact.evidenceIds
-                      .map((id) => evidence.find((item) => item.id === id)?.sourceLabel ?? id)
-                      .join(', ')}
-                  </p>
                 </fieldset>
               ))}
               <button

@@ -72,6 +72,15 @@ test('shows clearly sourced facts returned by the extraction boundary', async ({
 
   await expect(page.getByText('Extraction source: fixture')).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Fact 1 value' })).toHaveValue('2026-02-10');
+  const sourceLink = page.getByRole('checkbox', { name: 'Synthetic termination email' });
+  await expect(sourceLink).toBeChecked();
+  await sourceLink.uncheck();
+  await page.getByRole('button', { name: 'Check preparation path' }).click();
+  await expect(
+    page.getByText(
+      'Add a value and at least one source to every fact you want to check, or remove it.',
+    ),
+  ).toBeVisible();
   await expect(
     page.getByText('Correct or remove every candidate before checking a preparation path.'),
   ).toBeVisible();
