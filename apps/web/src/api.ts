@@ -27,6 +27,15 @@ export type RouteDecision = Readonly<{
   missingFacts: FactKey[];
 }>;
 
+export function privateJsonRequest(body: unknown): RequestInit {
+  return {
+    method: 'POST',
+    cache: 'no-store',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  };
+}
+
 function isFact(value: unknown): value is Fact {
   if (typeof value !== 'object' || value === null) return false;
   const fact = value as Record<string, unknown>;

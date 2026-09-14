@@ -2,6 +2,7 @@ import { type FormEvent, useRef, useState } from 'react';
 import {
   extractionFromResponse,
   factKeys,
+  privateJsonRequest,
   routeFromResponse,
   type Fact,
   type RouteDecision,
@@ -54,9 +55,7 @@ export function App() {
     extractionController.current = controller;
     try {
       const response = await fetch('/v1/extractions/facts', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ evidence }),
+        ...privateJsonRequest({ evidence }),
         signal: controller.signal,
       });
       const result = extractionFromResponse(await response.json());
@@ -129,9 +128,7 @@ export function App() {
     routeController.current = controller;
     try {
       const response = await fetch('/v1/routes/prepare', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ evidence, facts }),
+        ...privateJsonRequest({ evidence, facts }),
         signal: controller.signal,
       });
       const result = routeFromResponse(await response.json());
