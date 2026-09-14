@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { caseInputSchema, factExtractionInputSchema } from './index';
+import { caseInputSchema, factExtractionInputSchema, routeDecisionSchema } from './index';
 
 const evidence = {
   id: 'document-1',
@@ -54,6 +54,53 @@ describe('evidence-link contracts', () => {
             evidenceIds: ['document-1', 'document-1'],
           },
         ],
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('route decision contracts', () => {
+  const action = {
+    id: 'preserve-original-records',
+    label: 'Preserve original records.',
+    basis: 'safety_policy',
+    policyId: 'evidence-preservation-v1',
+  } as const;
+
+  test('accepts bounded unique route rendering fields', () => {
+    expect(
+      routeDecisionSchema.safeParse({
+        status: 'safe_preparation_route',
+        ruleId: 'scope.termination.preparation',
+        actions: [action],
+        missingFacts: [],
+      }).success,
+    ).toBe(true);
+  });
+
+  test('rejects oversized and duplicate route rendering fields', () => {
+    expect(
+      routeDecisionSchema.safeParse({
+        status: 'safe_preparation_route',
+        ruleId: 'x'.repeat(129),
+        actions: [action],
+        missingFacts: [],
+      }).success,
+    ).toBe(false);
+    expect(
+      routeDecisionSchema.safeParse({
+        status: 'safe_preparation_route',
+        ruleId: 'scope.termination.preparation',
+        actions: [action, action],
+        missingFacts: [],
+      }).success,
+    ).toBe(false);
+    expect(
+      routeDecisionSchema.safeParse({
+        status: 'safe_preparation_route',
+        ruleId: 'scope.termination.preparation',
+        actions: [action],
+        missingFacts: ['event_date', 'event_date'],
       }).success,
     ).toBe(false);
   });

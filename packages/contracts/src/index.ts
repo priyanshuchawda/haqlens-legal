@@ -124,26 +124,38 @@ export const extractionSafeModeSchema = z
 export const routeActionSchema = z.discriminatedUnion('basis', [
   z
     .object({
-      id: z.string().min(1),
-      label: z.string().min(1),
+      id: z.string().min(1).max(128),
+      label: z.string().min(1).max(500),
       basis: z.literal('evidence'),
-      evidenceIds: z.array(z.string().min(1)).min(1),
+      evidenceIds: z
+        .array(z.string().min(1).max(128))
+        .min(1)
+        .max(10)
+        .refine((ids) => new Set(ids).size === ids.length, {
+          message: 'An action must not repeat an evidence ID.',
+        }),
     })
     .strict(),
   z
     .object({
-      id: z.string().min(1),
-      label: z.string().min(1),
+      id: z.string().min(1).max(128),
+      label: z.string().min(1).max(500),
       basis: z.literal('missing_information'),
-      factKeys: z.array(factKeySchema).min(1),
+      factKeys: z
+        .array(factKeySchema)
+        .min(1)
+        .max(6)
+        .refine((keys) => new Set(keys).size === keys.length, {
+          message: 'An action must not repeat a fact key.',
+        }),
     })
     .strict(),
   z
     .object({
-      id: z.string().min(1),
-      label: z.string().min(1),
+      id: z.string().min(1).max(128),
+      label: z.string().min(1).max(500),
       basis: z.literal('safety_policy'),
-      policyId: z.string().min(1),
+      policyId: z.string().min(1).max(128),
     })
     .strict(),
 ]);
@@ -151,11 +163,25 @@ export const routeActionSchema = z.discriminatedUnion('basis', [
 export const routeDecisionSchema = z
   .object({
     status: routeStatusSchema,
-    ruleId: z.string().min(1),
-    actions: z.array(routeActionSchema).min(1),
-    missingFacts: z.array(factKeySchema),
+    ruleId: z.string().min(1).max(128),
+    actions: z.array(routeActionSchema).min(1).max(10),
+    missingFacts: z
+      .array(factKeySchema)
+      .max(6)
+      .refine((keys) => new Set(keys).size === keys.length, {
+        message: 'A route must not repeat a missing fact.',
+      }),
   })
-  .strict();
+  .strict()
+  .superRefine((route, context) => {
+    if (new Set(route.actions.map((action) => action.id)).size === route.actions.length) return;
+
+    context.addIssue({
+      code: 'custom',
+      message: 'A route must not repeat an action ID.',
+      path: ['actions'],
+    });
+  });
 
 export type CaseFact = z.infer<typeof caseFactSchema>;
 export type CaseInput = z.infer<typeof caseInputSchema>;
