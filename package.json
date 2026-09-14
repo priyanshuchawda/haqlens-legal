@@ -5,7 +5,8 @@
   "type": "module",
   "packageManager": "bun@1.4.2",
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "build": "bun run build:api && bun run build:web && bun run scan:client-secrets",
@@ -17,7 +18,8 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc -b",
-    "test": "bun test apps",
+    "test": "bun test apps packages",
+    "test:coverage": "bun test --coverage --coverage-reporter=text apps packages",
     "test:integration": "bun test apps/api/src/app.test.ts",
     "test:e2e": "playwright test --project=chromium --grep-invert accessibility",
     "test:a11y": "playwright test --project=a11y --grep accessibility",
