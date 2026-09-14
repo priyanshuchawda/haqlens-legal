@@ -3,6 +3,7 @@ import { createFixtureExtractor } from '@h2s/ai-gemini';
 
 import { app, createApp, MAX_JSON_BYTES } from './app';
 import { ConfigurationError, loadRuntimeConfig } from './config';
+import { createRateLimiter } from './rate-limit';
 
 describe('API baseline', () => {
   test('returns a non-cacheable health response with security headers', async () => {
@@ -79,6 +80,36 @@ const validPayload = {
 const extractionPayload = { evidence: validPayload.evidence };
 
 describe('secure route API boundary', () => {
+  test('rate limits before parsing or invoking an endpoint dependency', async () => {
+    const limitedApp = createApp({
+      rateLimiter: createRateLimiter({
+        limit: 1,
+        maxEntries: 10,
+        now: () => 1_000,
+        windowMs: 10_000,
+      }),
+      route: () => {
+        throw new Error('The route engine must not run after exhaustion.');
+      },
+    });
+    const first = await limitedApp.request(
+      '/v1/routes/prepare',
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' },
+      { clientKey: 'trusted-peer-a' },
+    );
+    const exhausted = await limitedApp.request(
+      '/v1/extractions/facts',
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' },
+      { clientKey: 'trusted-peer-a' },
+    );
+
+    expect(first.status).toBe(422);
+    expect(exhausted.status).toBe(429);
+    expect(await exhausted.json()).toEqual({ error: 'rate_limited' });
+    expect(exhausted.headers.get('retry-after')).toBe('10');
+    expect(exhausted.headers.get('cache-control')).toBe('no-store');
+  });
+
   test('routes only a contract-valid JSON payload', async () => {
     const response = await app.request('/v1/routes/prepare', {
       method: 'POST',

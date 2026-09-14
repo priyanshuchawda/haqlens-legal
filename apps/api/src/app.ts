@@ -10,6 +10,7 @@ import {
 import type { FactExtractor } from '@h2s/ai-gemini';
 import { routeCase } from '@h2s/core';
 import { Hono, type Context } from 'hono';
+import { createRateLimiter, type RateLimiter } from './rate-limit';
 
 export const MAX_JSON_BYTES = 64 * 1024;
 
@@ -28,7 +29,10 @@ type AppDependencies = Readonly<{
   extractionSource?: 'disabled' | 'fixture' | 'gemini';
   factExtractor?: FactExtractor;
   route?: Route;
+  rateLimiter?: RateLimiter;
 }>;
+
+type RuntimeBindings = Readonly<{ clientKey?: string }>;
 
 type ParsedJson = Readonly<{ payload: unknown }> | Readonly<{ response: Response }>;
 
@@ -66,8 +70,14 @@ export function createApp({
   extractionSource = 'disabled',
   factExtractor,
   route = routeCase,
+  rateLimiter = createRateLimiter({
+    limit: 30,
+    maxEntries: 10_000,
+    now: Date.now,
+    windowMs: 60_000,
+  }),
 }: AppDependencies = {}) {
-  const application = new Hono();
+  const application = new Hono<{ Bindings: RuntimeBindings }>();
 
   application.use('*', async (context, next) => {
     for (const [name, value] of Object.entries(securityHeaders)) {
@@ -78,6 +88,17 @@ export function createApp({
   });
 
   application.get('/health', (context) => context.json({ status: 'ok' }));
+
+  application.use('/v1/*', async (context, next) => {
+    const result = rateLimiter.consume(context.env?.clientKey ?? 'unknown-peer');
+
+    if (!result.allowed) {
+      context.header('retry-after', String(result.retryAfterSeconds));
+      return context.json({ error: 'rate_limited' }, 429);
+    }
+
+    await next();
+  });
 
   application.post('/v1/routes/prepare', async (context) => {
     const parsed = await parseBoundedJson(context);
