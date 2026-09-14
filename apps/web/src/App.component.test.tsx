@@ -38,7 +38,7 @@ describe('App component', () => {
     expect(screen.getByRole('alertdialog')).toBeDefined();
     expect(screen.getByRole('alertdialog').getAttribute('aria-modal')).toBe('true');
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Keep working' }));
-    await user.click(screen.getByRole('button', { name: 'Keep working' }));
+    await user.keyboard('{Escape}');
     expect(screen.queryByRole('alertdialog')).toBeNull();
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Clear this session' }));
   });

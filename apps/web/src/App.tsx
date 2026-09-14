@@ -47,7 +47,13 @@ export function App() {
     if (confirmClear) {
       wasConfirmingClear.current = true;
       keepWorkingButton.current?.focus();
-      return;
+      const dismissOnEscape = (event: KeyboardEvent) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        setConfirmClear(false);
+      };
+      document.addEventListener('keydown', dismissOnEscape);
+      return () => document.removeEventListener('keydown', dismissOnEscape);
     }
 
     if (!wasConfirmingClear.current) return;
