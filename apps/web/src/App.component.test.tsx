@@ -39,4 +39,16 @@ describe('App component', () => {
     await user.click(screen.getByRole('button', { name: 'Keep working' }));
     expect(screen.queryByRole('alertdialog')).toBeNull();
   });
+
+  test('caps evidence drafts at the extraction contract limit', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    for (let index = 1; index < 20; index += 1) {
+      await user.click(screen.getByRole('button', { name: 'Add evidence' }));
+    }
+
+    expect(screen.getAllByRole('group', { name: /^Evidence \d+$/u })).toHaveLength(20);
+    expect(screen.queryByRole('button', { name: 'Add evidence' })).toBeNull();
+  });
 });
