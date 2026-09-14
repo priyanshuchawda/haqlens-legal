@@ -105,5 +105,6 @@ export const routeDecisionSchema = z
 
 export type CaseFact = z.infer<typeof caseFactSchema>;
 export type CaseInput = z.infer<typeof caseInputSchema>;
+export type Evidence = z.infer<typeof evidenceSchema>;
 export type FactKey = z.infer<typeof factKeySchema>;
 export type RouteDecision = z.infer<typeof routeDecisionSchema>;
