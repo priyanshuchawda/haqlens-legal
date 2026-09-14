@@ -1,7 +1,16 @@
 import { describe, expect, test } from 'bun:test';
-import { extractionFromResponse, routeFromResponse } from './api';
+import { extractionFromResponse, privateJsonRequest, routeFromResponse } from './api';
 
 describe('untrusted browser API parsers', () => {
+  test('makes evidence requests explicitly non-cacheable', () => {
+    expect(privateJsonRequest({ evidence: [] })).toEqual({
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'content-type': 'application/json' },
+      body: '{"evidence":[]}',
+    });
+  });
+
   test('accepts only contract-shaped extraction responses', () => {
     expect(
       extractionFromResponse({
