@@ -36,6 +36,15 @@ export function privateJsonRequest(body: unknown): RequestInit {
   };
 }
 
+export function normaliseEvidenceText(value: string): string | null {
+  const normalised = value.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
+  const hasUnsafeControlCharacter = [...normalised].some((character) => {
+    const code = character.charCodeAt(0);
+    return code === 127 || (code < 32 && code !== 9 && code !== 10);
+  });
+  return hasUnsafeControlCharacter ? null : normalised;
+}
+
 function isFact(value: unknown): value is Fact {
   if (typeof value !== 'object' || value === null) return false;
   const fact = value as Record<string, unknown>;
