@@ -81,6 +81,23 @@ describe('untrusted browser API parsers', () => {
         new Set(['evidence-1']),
       ),
     ).toBeNull();
+    expect(
+      extractionFromResponse(
+        {
+          source: 'gemini',
+          safeMode: false,
+          facts: [
+            {
+              key: 'event_date',
+              value: '2026-02-10',
+              certainty: 'confirmed',
+              evidenceIds: ['evidence-1', 'evidence-1'],
+            },
+          ],
+        },
+        new Set(['evidence-1']),
+      ),
+    ).toBeNull();
   });
 
   test('rejects route payloads that cannot be safely rendered', () => {
