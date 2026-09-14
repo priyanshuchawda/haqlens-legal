@@ -139,4 +139,27 @@ describe('App component', () => {
       fetchSpy.restore();
     }
   });
+
+  test('fails closed when an extraction response has malformed JSON', async () => {
+    const user = userEvent.setup();
+    const fetchSpy = spyOnFetch(
+      async () =>
+        new Response('{', { headers: { 'content-type': 'application/json' }, status: 200 }),
+    );
+
+    try {
+      render(<App />);
+      await user.type(screen.getByLabelText('Source label'), 'Termination email');
+      await user.type(screen.getByLabelText('Evidence excerpt'), 'Employment ended today.');
+      await user.click(screen.getByRole('button', { name: 'Extract facts for review' }));
+
+      expect(
+        await screen.findByRole('heading', { name: 'Fact extraction is unavailable' }),
+      ).toBeDefined();
+      expect(screen.queryByText('{')).toBeNull();
+      expect(fetchSpy.requests()).toBe(1);
+    } finally {
+      fetchSpy.restore();
+    }
+  });
 });
