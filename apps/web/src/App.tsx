@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useRef, useState } from 'react';
 import {
   extractionFromResponse,
   factKeys,
@@ -23,6 +23,10 @@ export function App() {
   const [route, setRoute] = useState<RouteDecision | null>(null);
   const [routeState, setRouteState] = useState<RouteState>('idle');
   const [formError, setFormError] = useState('');
+  const extractionController = useRef<AbortController | null>(null);
+  const routeController = useRef<AbortController | null>(null);
+  const extractionGeneration = useRef(0);
+  const routeGeneration = useRef(0);
   const evidence = evidenceDrafts.map((item) => ({
     ...item,
     kind: 'document_quote' as const,
@@ -39,17 +43,23 @@ export function App() {
       );
       return;
     }
+    extractionController.current?.abort();
+    const generation = ++extractionGeneration.current;
     setFormError('');
     setExtraction('submitting');
     setRoute(null);
     setRouteState('idle');
+    const controller = new AbortController();
+    extractionController.current = controller;
     try {
       const response = await fetch('/v1/extractions/facts', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ evidence }),
+        signal: controller.signal,
       });
       const result = extractionFromResponse(await response.json());
+      if (generation !== extractionGeneration.current) return;
       if (response.ok && result) {
         setFacts(result.facts);
         setSource(result.source);
@@ -59,6 +69,7 @@ export function App() {
     } catch {
       /* Fail closed without rendering transport or provider details. */
     }
+    if (generation !== extractionGeneration.current) return;
     setExtraction('safe-mode');
   }
   function updateFact(index: number, patch: Partial<Fact>) {
@@ -67,29 +78,56 @@ export function App() {
     );
   }
   function updateEvidence(id: string, patch: Partial<EvidenceDraft>) {
+    invalidateEvidenceResults();
     setEvidenceDrafts((current) =>
       current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
     );
   }
   function removeEvidence(id: string) {
+    invalidateEvidenceResults();
     setEvidenceDrafts((current) => current.filter((item) => item.id !== id));
     setFacts((current) => current.filter((fact) => !fact.evidenceIds.includes(id)));
+  }
+  function addEvidence() {
+    invalidateEvidenceResults();
+    setEvidenceDrafts((current) => [
+      ...current,
+      { id: `evidence-${nextEvidenceId}`, sourceLabel: '', excerpt: '' },
+    ]);
+    setNextEvidenceId((current) => current + 1);
+  }
+  function invalidateEvidenceResults() {
+    extractionController.current?.abort();
+    routeController.current?.abort();
+    extractionGeneration.current += 1;
+    routeGeneration.current += 1;
+    setExtraction('idle');
+    setRouteState('idle');
+    setRoute(null);
+    setFacts([]);
+    setSource(null);
   }
   async function submitRoute() {
     if (!facts.length || facts.some((fact) => !fact.value.trim())) {
       setFormError('Add a value to every fact you want to check, or remove it.');
       return;
     }
+    routeController.current?.abort();
+    const generation = ++routeGeneration.current;
     setFormError('');
     setRouteState('submitting');
     setRoute(null);
+    const controller = new AbortController();
+    routeController.current = controller;
     try {
       const response = await fetch('/v1/routes/prepare', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ evidence, facts }),
+        signal: controller.signal,
       });
       const result = routeFromResponse(await response.json());
+      if (generation !== routeGeneration.current) return;
       if (response.ok && result) {
         setRoute(result);
         setRouteState('success');
@@ -98,6 +136,7 @@ export function App() {
     } catch {
       /* Fail closed without diagnostics. */
     }
+    if (generation !== routeGeneration.current) return;
     setRouteState('safe-mode');
   }
   return (
@@ -162,16 +201,7 @@ export function App() {
             </fieldset>
           ))}
           {evidenceDrafts.length < 20 ? (
-            <button
-              type="button"
-              onClick={() => {
-                setEvidenceDrafts((current) => [
-                  ...current,
-                  { id: `evidence-${nextEvidenceId}`, sourceLabel: '', excerpt: '' },
-                ]);
-                setNextEvidenceId((current) => current + 1);
-              }}
-            >
+            <button type="button" onClick={addEvidence}>
               Add evidence
             </button>
           ) : null}
