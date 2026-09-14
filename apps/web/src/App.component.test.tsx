@@ -191,4 +191,41 @@ describe('App component', () => {
       fetchSpy.restore();
     }
   });
+
+  test('renders an evidence-linked fact review after successful extraction', async () => {
+    const user = userEvent.setup();
+    const fetchSpy = spyOnFetch(async () =>
+      Response.json({
+        source: 'fixture',
+        safeMode: false,
+        facts: [
+          {
+            key: 'event_date',
+            value: '2026-02-10',
+            certainty: 'confirmed',
+            evidenceIds: ['evidence-1'],
+          },
+        ],
+      }),
+    );
+
+    try {
+      render(<App />);
+      await user.type(screen.getByLabelText('Source label'), 'Termination email');
+      await user.type(screen.getByLabelText('Evidence excerpt'), 'Employment ended today.');
+      await user.click(screen.getByRole('button', { name: 'Extract facts for review' }));
+
+      expect(
+        await screen.findByRole('heading', { name: 'Step 2 of 3: confirm facts' }),
+      ).toBeDefined();
+      expect(screen.getByText('Extraction source: fixture')).toBeDefined();
+      expect((screen.getByLabelText('Fact 1 value') as HTMLInputElement).value).toBe('2026-02-10');
+      expect(
+        (screen.getByRole('checkbox', { name: 'Termination email' }) as HTMLInputElement).checked,
+      ).toBe(true);
+      expect(fetchSpy.requests()).toBe(1);
+    } finally {
+      fetchSpy.restore();
+    }
+  });
 });
