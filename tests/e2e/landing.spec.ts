@@ -27,6 +27,19 @@ test('validates evidence locally before submitting it', async ({ page }) => {
   ).toBeVisible();
 });
 
+test('requires confirmation before discarding local session data', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Source label').fill('Temporary source');
+  await page.getByRole('button', { name: 'Clear this session' }).click();
+  await expect(page.getByRole('alertdialog')).toBeVisible();
+  await page.getByRole('button', { name: 'Keep working' }).click();
+  await expect(page.getByLabel('Source label')).toHaveValue('Temporary source');
+  await page.getByRole('button', { name: 'Clear this session' }).click();
+  await page.getByRole('button', { name: 'Clear all local data' }).click();
+  await expect(page.getByLabel('Source label')).toHaveValue('');
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+});
+
 test('shows clearly sourced facts returned by the extraction boundary', async ({ page }) => {
   await page.route('**/v1/extractions/facts', async (route) => {
     const request = route.request();
