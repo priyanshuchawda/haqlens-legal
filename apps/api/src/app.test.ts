@@ -88,6 +88,16 @@ describe('runtime configuration', () => {
     expect(() => loadRuntimeConfig({ AI_PROVIDER: 'gemini' })).toThrow(ConfigurationError);
   });
 
+  test.each([
+    { AI_PROVIDER: 'unsupported' },
+    { AI_PROVIDER: 'gemini', GEMINI_API_KEY: '   ' },
+    { PORT: '0' },
+    { PORT: '65536' },
+    { PORT: 'not-a-port' },
+  ])('fails closed on invalid runtime configuration %#', (environment) => {
+    expect(() => loadRuntimeConfig(environment)).toThrow(ConfigurationError);
+  });
+
   test('accepts Gemini mode only with a non-empty credential', () => {
     expect(loadRuntimeConfig({ AI_PROVIDER: 'gemini', GEMINI_API_KEY: 'test-key' })).toEqual({
       AI_PROVIDER: 'gemini',
