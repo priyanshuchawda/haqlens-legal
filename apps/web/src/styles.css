@@ -162,6 +162,21 @@ button:disabled {
   padding: 1rem;
 }
 
+.evidence-card {
+  border: 1px solid #475569;
+  border-radius: 0.5rem;
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 1rem;
+}
+
+.fact-sources {
+  color: #bae6fd;
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
 .fact-card label {
   display: grid;
   gap: 0.35rem;

@@ -1,4 +1,4 @@
-import { type FormEvent, useId, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import {
   extractionFromResponse,
   factKeys,
@@ -10,32 +10,33 @@ import {
 type ExtractionState = 'idle' | 'submitting' | 'safe-mode' | 'success';
 type RouteState = 'idle' | 'submitting' | 'safe-mode' | 'success';
 const factLabel = (key: string) => key.replaceAll('_', ' ');
+type EvidenceDraft = Readonly<{ id: string; sourceLabel: string; excerpt: string }>;
 
 export function App() {
-  const sourceLabelId = useId();
-  const excerptId = useId();
-  const [sourceLabel, setSourceLabel] = useState('');
-  const [excerpt, setExcerpt] = useState('');
+  const [evidenceDrafts, setEvidenceDrafts] = useState<EvidenceDraft[]>([
+    { id: 'evidence-1', sourceLabel: '', excerpt: '' },
+  ]);
+  const [nextEvidenceId, setNextEvidenceId] = useState(2);
   const [facts, setFacts] = useState<Fact[]>([]);
   const [source, setSource] = useState<'fixture' | 'gemini' | null>(null);
   const [extraction, setExtraction] = useState<ExtractionState>('idle');
   const [route, setRoute] = useState<RouteDecision | null>(null);
   const [routeState, setRouteState] = useState<RouteState>('idle');
   const [formError, setFormError] = useState('');
-  const evidence = [
-    {
-      id: 'evidence-1',
-      kind: 'document_quote',
-      sourceLabel: sourceLabel.trim(),
-      page: null,
-      excerpt: excerpt.trim(),
-    },
-  ];
+  const evidence = evidenceDrafts.map((item) => ({
+    ...item,
+    kind: 'document_quote' as const,
+    page: null,
+    sourceLabel: item.sourceLabel.trim(),
+    excerpt: item.excerpt.trim(),
+  }));
 
   async function submitEvidence(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!sourceLabel.trim() || !excerpt.trim()) {
-      setFormError('Add both a source label and an evidence excerpt before continuing.');
+    if (evidence.some((item) => !item.sourceLabel || !item.excerpt)) {
+      setFormError(
+        'Add a source label and an evidence excerpt to every evidence item before continuing.',
+      );
       return;
     }
     setFormError('');
@@ -64,6 +65,15 @@ export function App() {
     setFacts((current) =>
       current.map((fact, itemIndex) => (itemIndex === index ? { ...fact, ...patch } : fact)),
     );
+  }
+  function updateEvidence(id: string, patch: Partial<EvidenceDraft>) {
+    setEvidenceDrafts((current) =>
+      current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    );
+  }
+  function removeEvidence(id: string) {
+    setEvidenceDrafts((current) => current.filter((item) => item.id !== id));
+    setFacts((current) => current.filter((fact) => !fact.evidenceIds.includes(id)));
   }
   async function submitRoute() {
     if (!facts.length || facts.some((fact) => !fact.value.trim())) {
@@ -109,7 +119,7 @@ export function App() {
       <section aria-labelledby="evidence-title" className="workspace">
         <div>
           <p className="eyebrow">Step 1 of 3</p>
-          <h2 id="evidence-title">Add one evidence excerpt</h2>
+          <h2 id="evidence-title">Add evidence excerpts</h2>
           <p className="supporting-copy">
             Use a short relevant quote. Do not add passwords, bank details, government IDs, or
             anything you would not share with a trusted support person.
@@ -120,27 +130,51 @@ export function App() {
           id="evidence-form"
           onSubmit={submitEvidence}
         >
-          <div className="field">
-            <label htmlFor={sourceLabelId}>Source label</label>
-            <input
-              id={sourceLabelId}
-              maxLength={120}
-              onChange={(event) => setSourceLabel(event.target.value)}
-              placeholder="For example: termination email, 10 February"
-              value={sourceLabel}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor={excerptId}>Evidence excerpt</label>
-            <textarea
-              id={excerptId}
-              maxLength={2000}
-              onChange={(event) => setExcerpt(event.target.value)}
-              placeholder="Paste a short factual excerpt."
-              rows={6}
-              value={excerpt}
-            />
-          </div>
+          {evidenceDrafts.map((item, index) => (
+            <fieldset className="evidence-card" key={item.id}>
+              <legend>Evidence {index + 1}</legend>
+              <div className="field">
+                <label htmlFor={`${item.id}-source`}>Source label</label>
+                <input
+                  id={`${item.id}-source`}
+                  maxLength={120}
+                  onChange={(event) => updateEvidence(item.id, { sourceLabel: event.target.value })}
+                  placeholder="For example: termination email, 10 February"
+                  value={item.sourceLabel}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor={`${item.id}-excerpt`}>Evidence excerpt</label>
+                <textarea
+                  id={`${item.id}-excerpt`}
+                  maxLength={2000}
+                  onChange={(event) => updateEvidence(item.id, { excerpt: event.target.value })}
+                  placeholder="Paste a short factual excerpt."
+                  rows={6}
+                  value={item.excerpt}
+                />
+              </div>
+              {evidenceDrafts.length > 1 ? (
+                <button type="button" onClick={() => removeEvidence(item.id)}>
+                  Remove evidence {index + 1}
+                </button>
+              ) : null}
+            </fieldset>
+          ))}
+          {evidenceDrafts.length < 20 ? (
+            <button
+              type="button"
+              onClick={() => {
+                setEvidenceDrafts((current) => [
+                  ...current,
+                  { id: `evidence-${nextEvidenceId}`, sourceLabel: '', excerpt: '' },
+                ]);
+                setNextEvidenceId((current) => current + 1);
+              }}
+            >
+              Add evidence
+            </button>
+          ) : null}
           {formError ? (
             <p className="form-error" id="form-error" role="alert">
               {formError}
@@ -221,6 +255,12 @@ export function App() {
                   >
                     Remove fact {index + 1}
                   </button>
+                  <p className="fact-sources">
+                    Sources:{' '}
+                    {fact.evidenceIds
+                      .map((id) => evidence.find((item) => item.id === id)?.sourceLabel ?? id)
+                      .join(', ')}
+                  </p>
                 </fieldset>
               ))}
               <button
@@ -232,7 +272,7 @@ export function App() {
                       key: 'case_category',
                       value: '',
                       certainty: 'uncertain',
-                      evidenceIds: ['evidence-1'],
+                      evidenceIds: [evidence[0]?.id ?? 'evidence-1'],
                     },
                   ])
                 }
