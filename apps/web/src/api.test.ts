@@ -33,18 +33,21 @@ describe('untrusted browser API parsers', () => {
 
   test('accepts only contract-shaped extraction responses', () => {
     expect(
-      extractionFromResponse({
-        source: 'fixture',
-        safeMode: false,
-        facts: [
-          {
-            key: 'event_date',
-            value: '2026-02-10',
-            certainty: 'confirmed',
-            evidenceIds: ['evidence-1'],
-          },
-        ],
-      }),
+      extractionFromResponse(
+        {
+          source: 'fixture',
+          safeMode: false,
+          facts: [
+            {
+              key: 'event_date',
+              value: '2026-02-10',
+              certainty: 'confirmed',
+              evidenceIds: ['evidence-1'],
+            },
+          ],
+        },
+        new Set(['evidence-1']),
+      ),
     ).toEqual({
       source: 'fixture',
       facts: [
@@ -57,11 +60,26 @@ describe('untrusted browser API parsers', () => {
       ],
     });
     expect(
-      extractionFromResponse({
-        source: 'gemini',
-        safeMode: false,
-        facts: [{ key: 'invented', value: 'x', certainty: 'confirmed', evidenceIds: [] }],
-      }),
+      extractionFromResponse(
+        {
+          source: 'gemini',
+          safeMode: false,
+          facts: [{ key: 'invented', value: 'x', certainty: 'confirmed', evidenceIds: [] }],
+        },
+        new Set(['evidence-1']),
+      ),
+    ).toBeNull();
+    expect(
+      extractionFromResponse(
+        {
+          source: 'gemini',
+          safeMode: false,
+          facts: [
+            { key: 'event_date', value: '2026-02-10', certainty: 'confirmed', evidenceIds: ['x'] },
+          ],
+        },
+        new Set(['evidence-1']),
+      ),
     ).toBeNull();
   });
 

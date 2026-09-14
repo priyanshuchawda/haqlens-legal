@@ -68,6 +68,7 @@ function isFact(value: unknown): value is Fact {
 
 export function extractionFromResponse(
   value: unknown,
+  submittedEvidenceIds: ReadonlySet<string>,
 ): { source: 'fixture' | 'gemini'; facts: Fact[] } | null {
   if (typeof value !== 'object' || value === null) return null;
   const response = value as Record<string, unknown>;
@@ -75,7 +76,11 @@ export function extractionFromResponse(
     (response.source !== 'fixture' && response.source !== 'gemini') ||
     response.safeMode !== false ||
     !Array.isArray(response.facts) ||
-    !response.facts.every(isFact)
+    !response.facts.every(
+      (fact) =>
+        isFact(fact) &&
+        fact.evidenceIds.every((evidenceId) => submittedEvidenceIds.has(evidenceId)),
+    )
   )
     return null;
   return { source: response.source, facts: response.facts };
