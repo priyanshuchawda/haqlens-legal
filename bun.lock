@@ -43,6 +43,18 @@
         "typescript": "5.9.3",
       },
     },
+    "packages/contracts": {
+      "name": "@h2s/contracts",
+      "dependencies": {
+        "zod": "4.6.5",
+      },
+    },
+    "packages/core": {
+      "name": "@h2s/core",
+      "dependencies": {
+        "@h2s/contracts": "workspace:*",
+      },
+    },
   },
   "packages": {
     "@axe-core/playwright": ["@axe-core/playwright@4.13.0", "", { "dependencies": { "axe-core": "~4.13.0" }, "peerDependencies": { "playwright-core": ">= 1.0.0" } }, "sha512-6YLx+kxXu5GJceG4ozFg+33a2EMTdjYwWGloJ3sb9Kta5pp+ZNS53uxGVog5JetIY8s++P5UrtX+cri+u0VAVg=="],
@@ -100,6 +112,10 @@
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.7.3", "", { "dependencies": { "@eslint/core": "^1.2.1", "levn": "^0.4.1" } }, "sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q=="],
 
     "@h2s/api": ["@h2s/api@workspace:apps/api"],
+
+    "@h2s/contracts": ["@h2s/contracts@workspace:packages/contracts"],
+
+    "@h2s/core": ["@h2s/core@workspace:packages/core"],
 
     "@h2s/web": ["@h2s/web@workspace:apps/web"],
 
