@@ -9,6 +9,7 @@ import { z } from 'zod';
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_MODEL = 'gemini-2.5-flash';
 const MAX_MODEL_LENGTH = 128;
+const MAX_PROVIDER_RESPONSE_BYTES = 256 * 1024;
 const MAX_TIMEOUT_MS = 60_000;
 const modelNamePattern = /^[a-zA-Z0-9._-]+$/u;
 
@@ -131,6 +132,26 @@ function textFromProviderResponse(value: unknown): string {
   return text;
 }
 
+async function readProviderResponse(response: Response): Promise<unknown> {
+  let body: string;
+
+  try {
+    body = await response.text();
+  } catch {
+    throw new ExtractionFailure('invalid_provider_response');
+  }
+
+  if (new TextEncoder().encode(body).byteLength > MAX_PROVIDER_RESPONSE_BYTES) {
+    throw new ExtractionFailure('invalid_provider_response');
+  }
+
+  try {
+    return JSON.parse(body) as unknown;
+  } catch {
+    throw new ExtractionFailure('invalid_provider_response');
+  }
+}
+
 export function createGeminiExtractor(options: GeminiExtractorOptions): FactExtractor {
   const fetcher = options.fetch ?? globalThis.fetch;
   const apiKey = options.apiKey.trim();
@@ -194,13 +215,7 @@ export function createGeminiExtractor(options: GeminiExtractorOptions): FactExtr
           throw new ExtractionFailure('provider_unavailable');
         }
 
-        let providerPayload: unknown;
-
-        try {
-          providerPayload = await response.json();
-        } catch {
-          throw new ExtractionFailure('invalid_provider_response');
-        }
+        const providerPayload = await readProviderResponse(response);
 
         let modelOutput: unknown;
 

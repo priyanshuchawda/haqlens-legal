@@ -84,6 +84,11 @@ describe('Gemini extraction adapter', () => {
       async () => new Response('not-json'),
       'invalid_provider_response',
     ],
+    [
+      'oversized provider payload',
+      async () => new Response('x'.repeat(256 * 1024 + 1)),
+      'invalid_provider_response',
+    ],
     ['malformed model JSON', async () => providerResponse('{'), 'invalid_model_output'],
     [
       'unknown output field',
