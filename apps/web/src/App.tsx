@@ -2,6 +2,7 @@ import { type FormEvent, useRef, useState } from 'react';
 import {
   extractionFromResponse,
   factKeys,
+  normaliseEvidenceText,
   privateJsonRequest,
   routeFromResponse,
   type Fact,
@@ -37,9 +38,24 @@ export function App() {
     excerpt: item.excerpt.trim(),
   }));
 
+  function normalisedEvidence() {
+    const prepared = evidence.map((item) => ({
+      ...item,
+      sourceLabel: normaliseEvidenceText(item.sourceLabel),
+      excerpt: normaliseEvidenceText(item.excerpt),
+    }));
+    return prepared.some((item) => item.sourceLabel === null || item.excerpt === null)
+      ? null
+      : prepared;
+  }
   async function submitEvidence(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (evidence.some((item) => !item.sourceLabel || !item.excerpt)) {
+    const preparedEvidence = normalisedEvidence();
+    if (preparedEvidence === null) {
+      setFormError('Evidence text cannot contain control characters.');
+      return;
+    }
+    if (preparedEvidence.some((item) => !item.sourceLabel || !item.excerpt)) {
       setFormError(
         'Add a source label and an evidence excerpt to every evidence item before continuing.',
       );
@@ -55,7 +71,7 @@ export function App() {
     extractionController.current = controller;
     try {
       const response = await fetch('/v1/extractions/facts', {
-        ...privateJsonRequest({ evidence }),
+        ...privateJsonRequest({ evidence: preparedEvidence }),
         signal: controller.signal,
       });
       const result = extractionFromResponse(await response.json());
@@ -115,6 +131,11 @@ export function App() {
     setConfirmClear(false);
   }
   async function submitRoute() {
+    const preparedEvidence = normalisedEvidence();
+    if (preparedEvidence === null) {
+      setFormError('Evidence text cannot contain control characters.');
+      return;
+    }
     if (!facts.length || facts.some((fact) => !fact.value.trim() || !fact.evidenceIds.length)) {
       setFormError(
         'Add a value and at least one source to every fact you want to check, or remove it.',
@@ -130,7 +151,7 @@ export function App() {
     routeController.current = controller;
     try {
       const response = await fetch('/v1/routes/prepare', {
-        ...privateJsonRequest({ evidence, facts }),
+        ...privateJsonRequest({ evidence: preparedEvidence, facts }),
         signal: controller.signal,
       });
       const result = routeFromResponse(await response.json());

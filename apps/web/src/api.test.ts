@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { extractionFromResponse, privateJsonRequest, routeFromResponse } from './api';
+import {
+  extractionFromResponse,
+  normaliseEvidenceText,
+  privateJsonRequest,
+  routeFromResponse,
+} from './api';
 
 describe('untrusted browser API parsers', () => {
   test('makes evidence requests explicitly non-cacheable', () => {
@@ -9,6 +14,11 @@ describe('untrusted browser API parsers', () => {
       headers: { 'content-type': 'application/json' },
       body: '{"evidence":[]}',
     });
+  });
+
+  test('normalises newlines while rejecting unsafe control characters', () => {
+    expect(normaliseEvidenceText('  first\r\nsecond\rthird  ')).toBe('first\nsecond\nthird');
+    expect(normaliseEvidenceText('unsafe\u0000text')).toBeNull();
   });
 
   test('accepts only contract-shaped extraction responses', () => {
