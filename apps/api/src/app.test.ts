@@ -23,6 +23,60 @@ describe('API baseline', () => {
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: 'not_found' });
   });
+
+  test('keeps required security headers on error responses', async () => {
+    const rateLimitedApp = createApp({
+      rateLimiter: createRateLimiter({
+        limit: 1,
+        maxEntries: 10,
+        now: () => 1_000,
+        windowMs: 10_000,
+      }),
+    });
+    const failingApp = createApp({
+      route: () => {
+        throw new Error('must not reach the client');
+      },
+    });
+    const request = {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(validPayload),
+    };
+
+    await rateLimitedApp.request('/v1/routes/prepare', request, { clientKey: 'peer-a' });
+    const responses = await Promise.all([
+      app.request('/v1/routes/prepare', { ...request, body: '{' }),
+      rateLimitedApp.request('/v1/routes/prepare', request, { clientKey: 'peer-a' }),
+      app.request('/unknown'),
+      failingApp.request('/v1/routes/prepare', request),
+    ]);
+
+    expect(responses.map((response) => response.status)).toEqual([400, 429, 404, 500]);
+    for (const response of responses) {
+      expect(
+        Object.fromEntries(
+          [
+            'cache-control',
+            'content-security-policy',
+            'cross-origin-opener-policy',
+            'cross-origin-resource-policy',
+            'referrer-policy',
+            'x-content-type-options',
+            'access-control-allow-origin',
+          ].map((name) => [name, response.headers.get(name)]),
+        ),
+      ).toEqual({
+        'cache-control': 'no-store',
+        'content-security-policy': "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+        'cross-origin-opener-policy': 'same-origin',
+        'cross-origin-resource-policy': 'same-origin',
+        'referrer-policy': 'no-referrer',
+        'x-content-type-options': 'nosniff',
+        'access-control-allow-origin': null,
+      });
+    }
+  });
 });
 
 describe('runtime configuration', () => {
