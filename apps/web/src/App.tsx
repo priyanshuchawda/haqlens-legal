@@ -1,4 +1,4 @@
-import { type FormEvent, useRef, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import {
   extractionFromResponse,
   factKeys,
@@ -32,6 +32,9 @@ export function App() {
   const routeController = useRef<AbortController | null>(null);
   const extractionGeneration = useRef(0);
   const routeGeneration = useRef(0);
+  const clearSessionTrigger = useRef<HTMLButtonElement | null>(null);
+  const keepWorkingButton = useRef<HTMLButtonElement | null>(null);
+  const wasConfirmingClear = useRef(false);
   const evidence = evidenceDrafts.map((item) => ({
     ...item,
     kind: 'document_quote' as const,
@@ -39,6 +42,18 @@ export function App() {
     sourceLabel: item.sourceLabel.trim(),
     excerpt: item.excerpt.trim(),
   }));
+
+  useEffect(() => {
+    if (confirmClear) {
+      wasConfirmingClear.current = true;
+      keepWorkingButton.current?.focus();
+      return;
+    }
+
+    if (!wasConfirmingClear.current) return;
+    wasConfirmingClear.current = false;
+    clearSessionTrigger.current?.focus();
+  }, [confirmClear]);
 
   function normalisedEvidence() {
     const prepared = evidence.map((item) => ({
@@ -207,7 +222,12 @@ export function App() {
           This tool provides legal information and preparation support, not legal advice. Your text
           is held only in this browser while you use this page; document upload is not enabled.
         </p>
-        <button className="clear-session" type="button" onClick={() => setConfirmClear(true)}>
+        <button
+          className="clear-session"
+          ref={clearSessionTrigger}
+          type="button"
+          onClick={() => setConfirmClear(true)}
+        >
           Clear this session
         </button>
       </section>
@@ -215,6 +235,7 @@ export function App() {
         <section
           aria-describedby="clear-session-detail"
           aria-labelledby="clear-session-title"
+          aria-modal="true"
           className="confirm-dialog"
           role="alertdialog"
         >
@@ -226,7 +247,7 @@ export function App() {
           <button type="button" onClick={clearSession}>
             Clear all local data
           </button>{' '}
-          <button type="button" onClick={() => setConfirmClear(false)}>
+          <button ref={keepWorkingButton} type="button" onClick={() => setConfirmClear(false)}>
             Keep working
           </button>
         </section>
