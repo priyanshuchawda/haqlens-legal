@@ -60,4 +60,32 @@ describe('App component', () => {
     expect(screen.getAllByRole('group', { name: /^Evidence \d+$/u })).toHaveLength(20);
     expect(screen.queryByRole('button', { name: 'Add evidence' })).toBeNull();
   });
+
+  test('keeps incomplete evidence local instead of requesting extraction', async () => {
+    const user = userEvent.setup();
+    const originalFetch = globalThis.fetch;
+    let requests = 0;
+    globalThis.fetch = Object.assign(
+      async (..._arguments: Parameters<typeof fetch>) => {
+        void _arguments;
+        requests += 1;
+        return new Response();
+      },
+      { preconnect: originalFetch.preconnect },
+    );
+
+    try {
+      render(<App />);
+      await user.click(screen.getByRole('button', { name: 'Extract facts for review' }));
+
+      expect(
+        screen.getByText(
+          'Add a source label and an evidence excerpt to every evidence item before continuing.',
+        ),
+      ).toBeDefined();
+      expect(requests).toBe(0);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
