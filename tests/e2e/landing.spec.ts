@@ -122,6 +122,19 @@ test('gives bounded retry guidance when extraction is rate limited', async ({ pa
   await expect(page.getByRole('status')).toContainText('No facts were generated.');
 });
 
+test('clears extraction retry guidance when evidence changes', async ({ page }) => {
+  await page.route('**/v1/extractions/facts', (route) =>
+    route.fulfill({ status: 429, headers: { 'retry-after': '60' }, body: '{}' }),
+  );
+  await page.goto('/');
+  await page.getByLabel('Source label').fill('Synthetic source');
+  await page.getByRole('textbox', { name: 'Evidence excerpt' }).fill('Synthetic excerpt.');
+  await page.getByRole('button', { name: 'Extract facts for review' }).click();
+  await expect(page.getByRole('status')).toContainText('Try again in about 60 seconds');
+  await page.getByLabel('Source label').fill('Updated synthetic source');
+  await expect(page.getByText('Try again in about 60 seconds')).toHaveCount(0);
+});
+
 test('gives bounded retry guidance when routing is rate limited', async ({ page }) => {
   await page.route('**/v1/extractions/facts', (route) =>
     route.fulfill({
