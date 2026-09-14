@@ -33,6 +33,7 @@ export function App() {
   const extractionGeneration = useRef(0);
   const routeGeneration = useRef(0);
   const clearSessionTrigger = useRef<HTMLButtonElement | null>(null);
+  const clearAllDataButton = useRef<HTMLButtonElement | null>(null);
   const keepWorkingButton = useRef<HTMLButtonElement | null>(null);
   const wasConfirmingClear = useRef(false);
   const evidence = evidenceDrafts.map((item) => ({
@@ -48,9 +49,24 @@ export function App() {
       wasConfirmingClear.current = true;
       keepWorkingButton.current?.focus();
       const dismissOnEscape = (event: KeyboardEvent) => {
-        if (event.key !== 'Escape') return;
-        event.preventDefault();
-        setConfirmClear(false);
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          setConfirmClear(false);
+          return;
+        }
+
+        if (event.key !== 'Tab') return;
+        const firstAction = clearAllDataButton.current;
+        const lastAction = keepWorkingButton.current;
+        if (firstAction === null || lastAction === null) return;
+
+        if (event.shiftKey && document.activeElement === firstAction) {
+          event.preventDefault();
+          lastAction.focus();
+        } else if (!event.shiftKey && document.activeElement === lastAction) {
+          event.preventDefault();
+          firstAction.focus();
+        }
       };
       document.addEventListener('keydown', dismissOnEscape);
       return () => document.removeEventListener('keydown', dismissOnEscape);
@@ -250,7 +266,7 @@ export function App() {
             This immediately discards the evidence, reviewed facts, and preparation result currently
             held in this browser.
           </p>
-          <button type="button" onClick={clearSession}>
+          <button ref={clearAllDataButton} type="button" onClick={clearSession}>
             Clear all local data
           </button>{' '}
           <button ref={keepWorkingButton} type="button" onClick={() => setConfirmClear(false)}>
