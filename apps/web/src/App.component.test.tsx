@@ -17,14 +17,14 @@ const { default: userEvent } = await import('@testing-library/user-event');
 
 afterEach(cleanup);
 
-function spyOnFetch() {
+function spyOnFetch(response: () => Promise<Response> = async () => new Response()) {
   const originalFetch = globalThis.fetch;
   let requests = 0;
   globalThis.fetch = Object.assign(
     async (..._arguments: Parameters<typeof fetch>) => {
       void _arguments;
       requests += 1;
-      return new Response();
+      return response();
     },
     { preconnect: originalFetch.preconnect },
   );
@@ -113,6 +113,28 @@ describe('App component', () => {
 
       expect(screen.getByText('Evidence text cannot contain control characters.')).toBeDefined();
       expect(fetchSpy.requests()).toBe(0);
+    } finally {
+      fetchSpy.restore();
+    }
+  });
+
+  test('fails closed without rendering extraction transport details', async () => {
+    const user = userEvent.setup();
+    const fetchSpy = spyOnFetch(async () => {
+      throw new Error('provider transport detail must stay private');
+    });
+
+    try {
+      render(<App />);
+      await user.type(screen.getByLabelText('Source label'), 'Termination email');
+      await user.type(screen.getByLabelText('Evidence excerpt'), 'Employment ended today.');
+      await user.click(screen.getByRole('button', { name: 'Extract facts for review' }));
+
+      expect(
+        await screen.findByRole('heading', { name: 'Fact extraction is unavailable' }),
+      ).toBeDefined();
+      expect(screen.queryByText('provider transport detail must stay private')).toBeNull();
+      expect(fetchSpy.requests()).toBe(1);
     } finally {
       fetchSpy.restore();
     }
