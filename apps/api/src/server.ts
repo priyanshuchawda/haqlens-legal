@@ -13,7 +13,10 @@ const app =
     : createApp();
 
 Bun.serve({
-  fetch: app.fetch,
+  fetch(request, server) {
+    const clientKey = server.requestIP(request)?.address ?? 'unknown-peer';
+    return app.fetch(request, { clientKey });
+  },
   maxRequestBodySize: MAX_JSON_BYTES,
   port: config.PORT,
 });
