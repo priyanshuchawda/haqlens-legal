@@ -12,10 +12,30 @@ Object.assign(globalThis, {
   window,
 });
 
-const { cleanup, render, screen } = await import('@testing-library/react');
+const { cleanup, fireEvent, render, screen } = await import('@testing-library/react');
 const { default: userEvent } = await import('@testing-library/user-event');
 
 afterEach(cleanup);
+
+function spyOnFetch() {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  globalThis.fetch = Object.assign(
+    async (..._arguments: Parameters<typeof fetch>) => {
+      void _arguments;
+      requests += 1;
+      return new Response();
+    },
+    { preconnect: originalFetch.preconnect },
+  );
+
+  return {
+    requests: () => requests,
+    restore: () => {
+      globalThis.fetch = originalFetch;
+    },
+  };
+}
 
 describe('App component', () => {
   test('renders the local-only safety boundary and bounded evidence controls', () => {
@@ -63,16 +83,7 @@ describe('App component', () => {
 
   test('keeps incomplete evidence local instead of requesting extraction', async () => {
     const user = userEvent.setup();
-    const originalFetch = globalThis.fetch;
-    let requests = 0;
-    globalThis.fetch = Object.assign(
-      async (..._arguments: Parameters<typeof fetch>) => {
-        void _arguments;
-        requests += 1;
-        return new Response();
-      },
-      { preconnect: originalFetch.preconnect },
-    );
+    const fetchSpy = spyOnFetch();
 
     try {
       render(<App />);
@@ -83,9 +94,27 @@ describe('App component', () => {
           'Add a source label and an evidence excerpt to every evidence item before continuing.',
         ),
       ).toBeDefined();
-      expect(requests).toBe(0);
+      expect(fetchSpy.requests()).toBe(0);
     } finally {
-      globalThis.fetch = originalFetch;
+      fetchSpy.restore();
+    }
+  });
+
+  test('keeps unsafe evidence text local instead of requesting extraction', async () => {
+    const user = userEvent.setup();
+    const fetchSpy = spyOnFetch();
+
+    try {
+      render(<App />);
+      fireEvent.change(screen.getByLabelText('Source label'), {
+        target: { value: 'Termination\u0001email' },
+      });
+      await user.click(screen.getByRole('button', { name: 'Extract facts for review' }));
+
+      expect(screen.getByText('Evidence text cannot contain control characters.')).toBeDefined();
+      expect(fetchSpy.requests()).toBe(0);
+    } finally {
+      fetchSpy.restore();
     }
   });
 });
