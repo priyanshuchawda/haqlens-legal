@@ -113,7 +113,7 @@ describe('secure route API boundary', () => {
   test('routes only a contract-valid JSON payload', async () => {
     const response = await app.request('/v1/routes/prepare', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json; charset=utf-8' },
       body: JSON.stringify(validPayload),
     });
 
@@ -167,19 +167,25 @@ describe('secure route API boundary', () => {
         throw new Error('The router must not receive this request.');
       },
     });
-    const wrongMedia = await guardedApp.request('/v1/routes/prepare', {
-      method: 'POST',
-      headers: { 'content-type': 'text/plain' },
-      body: 'not json',
-    });
+    const wrongMediaResponses = await Promise.all(
+      ['text/plain', 'application/json-evil'].map((contentType) =>
+        guardedApp.request('/v1/routes/prepare', {
+          method: 'POST',
+          headers: { 'content-type': contentType },
+          body: 'not json',
+        }),
+      ),
+    );
     const oversized = await guardedApp.request('/v1/routes/prepare', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'content-length': String(MAX_JSON_BYTES + 1) },
       body: '{}',
     });
 
-    expect(wrongMedia.status).toBe(415);
-    expect(await wrongMedia.json()).toEqual({ error: 'unsupported_media_type' });
+    for (const wrongMedia of wrongMediaResponses) {
+      expect(wrongMedia.status).toBe(415);
+      expect(await wrongMedia.json()).toEqual({ error: 'unsupported_media_type' });
+    }
     expect(oversized.status).toBe(413);
     expect(await oversized.json()).toEqual({ error: 'payload_too_large' });
     expect(calls).toBe(0);
