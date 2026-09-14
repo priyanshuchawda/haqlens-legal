@@ -228,4 +228,47 @@ describe('App component', () => {
       fetchSpy.restore();
     }
   });
+
+  test('renders a validated preparation route after fact review', async () => {
+    const user = userEvent.setup();
+    let responseNumber = 0;
+    const fetchSpy = spyOnFetch(async () => {
+      responseNumber += 1;
+      return responseNumber === 1
+        ? Response.json({
+            source: 'fixture',
+            safeMode: false,
+            facts: [
+              {
+                key: 'event_date',
+                value: '2026-02-10',
+                certainty: 'confirmed',
+                evidenceIds: ['evidence-1'],
+              },
+            ],
+          })
+        : Response.json({
+            status: 'safe_preparation_route',
+            ruleId: 'scope.termination.preparation',
+            actions: [{ id: 'preserve', label: 'Preserve original records before sharing them.' }],
+            missingFacts: [],
+          });
+    });
+
+    try {
+      render(<App />);
+      await user.type(screen.getByLabelText('Source label'), 'Termination email');
+      await user.type(screen.getByLabelText('Evidence excerpt'), 'Employment ended today.');
+      await user.click(screen.getByRole('button', { name: 'Extract facts for review' }));
+      await screen.findByRole('heading', { name: 'Step 2 of 3: confirm facts' });
+      await user.click(screen.getByRole('button', { name: 'Check preparation path' }));
+
+      expect(await screen.findByRole('heading', { name: 'Preparation steps' })).toBeDefined();
+      expect(screen.getByText('Deterministic rule: scope.termination.preparation')).toBeDefined();
+      expect(screen.getByText('Preserve original records before sharing them.')).toBeDefined();
+      expect(fetchSpy.requests()).toBe(2);
+    } finally {
+      fetchSpy.restore();
+    }
+  });
 });
