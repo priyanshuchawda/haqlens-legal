@@ -12,6 +12,17 @@ export function createRateLimiter(
     windowMs: number;
   }>,
 ): RateLimiter {
+  if (
+    !Number.isSafeInteger(options.limit) ||
+    options.limit < 1 ||
+    !Number.isSafeInteger(options.maxEntries) ||
+    options.maxEntries < 1 ||
+    !Number.isSafeInteger(options.windowMs) ||
+    options.windowMs < 1
+  ) {
+    throw new RangeError('Rate limiter configuration must use positive safe integers.');
+  }
+
   const entries = new Map<string, Entry>();
 
   return {
