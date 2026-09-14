@@ -192,6 +192,20 @@ describe('secure route API boundary', () => {
         facts: [{ ...validPayload.facts[0], evidenceIds: ['unknown-evidence'] }],
       }),
     ],
+    [
+      'duplicate evidence ID',
+      JSON.stringify({
+        ...validPayload,
+        evidence: [validPayload.evidence[0], validPayload.evidence[0]],
+      }),
+    ],
+    [
+      'duplicate fact evidence link',
+      JSON.stringify({
+        ...validPayload,
+        facts: [{ ...validPayload.facts[0], evidenceIds: ['document-1', 'document-1'] }],
+      }),
+    ],
   ])('rejects %s before invoking the route engine', async (_, body) => {
     let calls = 0;
     const guardedApp = createApp({
