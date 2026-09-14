@@ -98,6 +98,7 @@ export function App() {
     setExtraction('safe-mode');
   }
   function updateFact(index: number, patch: Partial<Fact>) {
+    invalidateRouteResult();
     setFacts((current) =>
       current.map((fact, itemIndex) => (itemIndex === index ? { ...fact, ...patch } : fact)),
     );
@@ -123,14 +124,17 @@ export function App() {
   }
   function invalidateEvidenceResults() {
     extractionController.current?.abort();
-    routeController.current?.abort();
     extractionGeneration.current += 1;
-    routeGeneration.current += 1;
     setExtraction('idle');
-    setRouteState('idle');
-    setRoute(null);
     setFacts([]);
     setSource(null);
+    invalidateRouteResult();
+  }
+  function invalidateRouteResult() {
+    routeController.current?.abort();
+    routeGeneration.current += 1;
+    setRouteState('idle');
+    setRoute(null);
     setRetryAfter(null);
   }
   function clearSession() {
@@ -373,9 +377,10 @@ export function App() {
                   </fieldset>
                   <button
                     type="button"
-                    onClick={() =>
-                      setFacts((current) => current.filter((_, itemIndex) => itemIndex !== index))
-                    }
+                    onClick={() => {
+                      invalidateRouteResult();
+                      setFacts((current) => current.filter((_, itemIndex) => itemIndex !== index));
+                    }}
                   >
                     Remove fact {index + 1}
                   </button>
@@ -383,7 +388,8 @@ export function App() {
               ))}
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
+                  invalidateRouteResult();
                   setFacts((current) => [
                     ...current,
                     {
@@ -392,8 +398,8 @@ export function App() {
                       certainty: 'uncertain',
                       evidenceIds: [evidence[0]?.id ?? 'evidence-1'],
                     },
-                  ])
-                }
+                  ]);
+                }}
               >
                 Add fact
               </button>{' '}

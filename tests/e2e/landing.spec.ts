@@ -220,6 +220,64 @@ test('requires reviewed facts and renders the deterministic preparation route', 
   );
 });
 
+test('removes a stale route when reviewed facts change', async ({ page }) => {
+  await page.route('**/v1/extractions/facts', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        source: 'fixture',
+        safeMode: false,
+        facts: [
+          ['case_category', 'termination'],
+          ['jurisdiction_country', 'India'],
+          ['jurisdiction_state', 'Maharashtra'],
+          ['worker_type', 'employee'],
+          ['event_date', '2026-02-10'],
+        ].map(([key, value]) => ({
+          key,
+          value,
+          certainty: 'confirmed',
+          evidenceIds: ['evidence-1'],
+        })),
+      }),
+    }),
+  );
+  await page.route('**/v1/routes/prepare', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'safe_preparation_route',
+        ruleId: 'scope.termination.preparation',
+        actions: [{ id: 'preserve', label: 'Preserve original records.' }],
+        missingFacts: [],
+      }),
+    }),
+  );
+  await page.goto('/');
+  await page.getByLabel('Source label').fill('Synthetic termination email');
+  await page
+    .getByRole('textbox', { name: 'Evidence excerpt' })
+    .fill('Employment ended on 2026-02-10.');
+  await page.getByRole('button', { name: 'Extract facts for review' }).click();
+  await page.getByRole('button', { name: 'Check preparation path' }).click();
+  await expect(page.getByText('Deterministic rule: scope.termination.preparation')).toBeVisible();
+
+  await page.getByRole('textbox', { name: 'Fact 1 value' }).fill('termination ');
+  await expect(page.getByText('Deterministic rule: scope.termination.preparation')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Check preparation path' }).click();
+  await expect(page.getByText('Deterministic rule: scope.termination.preparation')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Add fact' }).click();
+  await expect(page.getByText('Deterministic rule: scope.termination.preparation')).toHaveCount(0);
+  await page.getByRole('textbox', { name: 'Fact 6 value' }).fill('termination');
+  await page.getByRole('combobox', { name: 'Fact 6 certainty' }).selectOption('confirmed');
+  await page.getByRole('button', { name: 'Check preparation path' }).click();
+  await expect(page.getByText('Deterministic rule: scope.termination.preparation')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Remove fact 6' }).click();
+  await expect(page.getByText('Deterministic rule: scope.termination.preparation')).toHaveCount(0);
+});
+
 test('prioritises an urgent safety route over ordinary preparation content', async ({ page }) => {
   await page.route('**/v1/extractions/facts', (route) =>
     route.fulfill({
