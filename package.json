@@ -26,6 +26,7 @@
     "audit": "bun audit",
     "scan:secrets": "bun scripts/scan-secrets.ts",
     "scan:client-secrets": "bun scripts/check-client-secrets.ts",
+    "validate:openapi": "bun scripts/validate-openapi.ts",
     "verify": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run audit && bun run scan:secrets"
   },
   "devDependencies": {

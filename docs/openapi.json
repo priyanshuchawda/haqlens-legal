@@ -1,0 +1,68 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Employment and Freelancer First Aid API",
+    "version": "0.1.0",
+    "description": "Prototype legal-information preparation API. It does not provide legal advice. Evidence requests and responses are non-cacheable."
+  },
+  "paths": {
+    "/health": { "get": { "responses": { "200": { "description": "Service is available" } } } },
+    "/v1/extractions/facts": {
+      "post": {
+        "description": "Extract evidence-linked factual candidates. 64 KiB JSON limit; no-store response.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["evidence"],
+                "properties": { "evidence": { "type": "array", "minItems": 1, "maxItems": 20 } },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Facts with fixture or Gemini provenance" },
+          "400": { "description": "Invalid JSON" },
+          "413": { "description": "Payload too large" },
+          "415": { "description": "JSON required" },
+          "422": { "description": "Invalid request" },
+          "429": { "description": "Rate limited; Retry-After is set" },
+          "503": { "description": "Rule-only safe mode" }
+        }
+      }
+    },
+    "/v1/routes/prepare": {
+      "post": {
+        "description": "Create a deterministic preparation result from reviewed evidence-linked facts. 64 KiB JSON limit; no-store response.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["evidence", "facts"],
+                "properties": {
+                  "evidence": { "type": "array", "minItems": 1, "maxItems": 100 },
+                  "facts": { "type": "array", "minItems": 1, "maxItems": 100 }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Deterministic preparation result" },
+          "400": { "description": "Invalid JSON" },
+          "413": { "description": "Payload too large" },
+          "415": { "description": "JSON required" },
+          "422": { "description": "Invalid request" },
+          "429": { "description": "Rate limited; Retry-After is set" },
+          "500": { "description": "Safe internal error envelope" }
+        }
+      }
+    }
+  }
+}
