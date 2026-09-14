@@ -34,7 +34,8 @@ test('requires confirmation before discarding local session data', async ({ page
   await expect(page.getByRole('alertdialog')).toBeVisible();
   await expect(page.getByRole('alertdialog')).toHaveAttribute('aria-modal', 'true');
   await expect(page.getByRole('button', { name: 'Keep working' })).toBeFocused();
-  await page.getByRole('button', { name: 'Keep working' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Clear this session' })).toBeFocused();
   await expect(page.getByLabel('Source label')).toHaveValue('Temporary source');
   await page.getByRole('button', { name: 'Clear this session' }).click();
