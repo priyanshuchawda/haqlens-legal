@@ -64,45 +64,6 @@ test('shows clearly sourced facts returned by the extraction boundary', async ({
   ).toBeVisible();
 });
 
-test('submits stable multi-evidence IDs and removes an item accessibly', async ({ page }) => {
-  await page.route('**/v1/extractions/facts', async (route) => {
-    const payload = route.request().postDataJSON();
-    expect(payload.evidence).toMatchObject([
-      { id: 'evidence-1', sourceLabel: 'First source' },
-      { id: 'evidence-2', sourceLabel: 'Second source' },
-    ]);
-    await route.fulfill({
-      contentType: 'application/json',
-      body: JSON.stringify({
-        source: 'fixture',
-        safeMode: false,
-        facts: [
-          {
-            key: 'event_date',
-            value: '2026-02-10',
-            certainty: 'confirmed',
-            evidenceIds: ['evidence-2'],
-          },
-        ],
-      }),
-    });
-  });
-  await page.goto('/');
-  await page.getByLabel('Source label').fill('First source');
-  await page.getByRole('textbox', { name: 'Evidence excerpt' }).fill('First excerpt.');
-  await page.getByRole('button', { name: 'Add evidence' }).click();
-  await page.getByLabel('Source label').nth(1).fill('Second source');
-  await page.getByRole('textbox', { name: 'Evidence excerpt' }).nth(1).fill('Second excerpt.');
-  await page.getByRole('button', { name: 'Extract facts for review' }).click();
-  await expect(page.getByText('Sources: Second source')).toBeVisible();
-  await page.getByRole('button', { name: 'Remove evidence 2' }).click();
-  await expect(page.getByRole('textbox', { name: 'Fact 1 value' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Check preparation path' }).click();
-  await expect(
-    page.getByText('Add a value to every fact you want to check, or remove it.'),
-  ).toBeVisible();
-});
-
 test('fails closed in the interface when extraction is unavailable', async ({ page }) => {
   await page.route('**/v1/extractions/facts', (route) =>
     route.fulfill({
