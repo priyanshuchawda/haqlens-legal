@@ -51,15 +51,15 @@ packages/contracts        packages/core        packages/ai-gemini
 
 ### Package responsibilities
 
-| Package | Owns | Must not own |
-| --- | --- | --- |
-| `contracts` | Zod request/response and evidence schemas | provider SDK calls or UI code |
-| `core` | pure fact-gap, timeline, risk-state and route functions | HTTP, files, model prompts |
-| `official-sources` | reviewed source manifest, version and retrieval date | user data |
-| `ai-gemini` | Gemini request, timeout, schema validation and error mapping | routing decisions |
-| `test-fixtures` | synthetic/sanitised documents and model responses | production credentials or personal data |
-| `api` | authentication-free request boundary, policy checks, orchestration | business rule duplication |
-| `web` | accessible guided workflow and local presentation state | secrets or legal decisions |
+| Package            | Owns                                                               | Must not own                            |
+| ------------------ | ------------------------------------------------------------------ | --------------------------------------- |
+| `contracts`        | Zod request/response and evidence schemas                          | provider SDK calls or UI code           |
+| `core`             | pure fact-gap, timeline, risk-state and route functions            | HTTP, files, model prompts              |
+| `official-sources` | reviewed source manifest, version and retrieval date               | user data                               |
+| `ai-gemini`        | Gemini request, timeout, schema validation and error mapping       | routing decisions                       |
+| `test-fixtures`    | synthetic/sanitised documents and model responses                  | production credentials or personal data |
+| `api`              | authentication-free request boundary, policy checks, orchestration | business rule duplication               |
+| `web`              | accessible guided workflow and local presentation state            | secrets or legal decisions              |
 
 No package may import an app. Domain rules accept and return immutable typed values so they can be unit-tested without a server or model.
 
@@ -124,16 +124,16 @@ The UI never uses colour alone for risk. Every status has text, icon, focus-visi
 
 ## 9. Failure and edge-case behavior
 
-| Situation | Safe behaviour |
-| --- | --- |
-| Immediate danger, coercion, self-harm, or emergency cue | Stop normal flow; show emergency-support guidance, no legal analysis |
-| Date present but ambiguous | Render `date needs confirmation`, never calculate a deadline |
-| Contradictory documents | Preserve both facts, mark conflict, require human review |
-| Scanned/illegible document | Ask for clearer material or manual facts; do not infer |
-| Unsupported legal matter | Give a scope boundary and a human-help preparation checklist |
-| Gemini outage or invalid JSON | Rule-Only Safe Mode; no fake success |
-| User edits a extracted fact | Preserve original/effective value distinction and mark it user-confirmed |
-| Model sees instruction-like text in a document | Ignore it as data and surface only evidence-bearing facts |
+| Situation                                               | Safe behaviour                                                           |
+| ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Immediate danger, coercion, self-harm, or emergency cue | Stop normal flow; show emergency-support guidance, no legal analysis     |
+| Date present but ambiguous                              | Render `date needs confirmation`, never calculate a deadline             |
+| Contradictory documents                                 | Preserve both facts, mark conflict, require human review                 |
+| Scanned/illegible document                              | Ask for clearer material or manual facts; do not infer                   |
+| Unsupported legal matter                                | Give a scope boundary and a human-help preparation checklist             |
+| Gemini outage or invalid JSON                           | Rule-Only Safe Mode; no fake success                                     |
+| User edits a extracted fact                             | Preserve original/effective value distinction and mark it user-confirmed |
+| Model sees instruction-like text in a document          | Ignore it as data and surface only evidence-bearing facts                |
 
 ## 10. Quality strategy
 
