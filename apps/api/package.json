@@ -8,6 +8,8 @@
     "start": "bun src/server.ts"
   },
   "dependencies": {
+    "@h2s/contracts": "workspace:*",
+    "@h2s/core": "workspace:*",
     "hono": "4.13.7",
     "zod": "4.6.5"
   }

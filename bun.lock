@@ -25,6 +25,8 @@
     "apps/api": {
       "name": "@h2s/api",
       "dependencies": {
+        "@h2s/contracts": "workspace:*",
+        "@h2s/core": "workspace:*",
         "hono": "4.13.7",
         "zod": "4.6.5",
       },

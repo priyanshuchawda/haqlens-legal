@@ -15,5 +15,6 @@
     "noEmit": true,
     "types": ["bun"]
   },
+  "references": [{ "path": "../../packages/contracts" }, { "path": "../../packages/core" }],
   "include": ["src/**/*.ts"]
 }
