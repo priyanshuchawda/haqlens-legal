@@ -1,96 +1,95 @@
 import { type FormEvent, useId, useState } from 'react';
+import {
+  extractionFromResponse,
+  factKeys,
+  routeFromResponse,
+  type Fact,
+  type RouteDecision,
+} from './api';
 
-type Fact = Readonly<{
-  key: string;
-  value: string;
-  certainty: 'confirmed' | 'uncertain' | 'conflicting';
-}>;
-
-type ExtractionState =
-  | Readonly<{ kind: 'idle' }>
-  | Readonly<{ kind: 'submitting' }>
-  | Readonly<{ kind: 'safe-mode' }>
-  | Readonly<{ kind: 'success'; source: 'fixture' | 'gemini'; facts: readonly Fact[] }>;
-
-function isFact(value: unknown): value is Fact {
-  if (typeof value !== 'object' || value === null) return false;
-
-  const fact = value as Record<string, unknown>;
-  return (
-    typeof fact.key === 'string' &&
-    typeof fact.value === 'string' &&
-    (fact.certainty === 'confirmed' ||
-      fact.certainty === 'uncertain' ||
-      fact.certainty === 'conflicting')
-  );
-}
-
-function isSuccessfulExtraction(value: unknown): value is {
-  source: 'fixture' | 'gemini';
-  safeMode: false;
-  facts: Fact[];
-} {
-  if (typeof value !== 'object' || value === null) return false;
-
-  const response = value as Record<string, unknown>;
-  return (
-    (response.source === 'fixture' || response.source === 'gemini') &&
-    response.safeMode === false &&
-    Array.isArray(response.facts) &&
-    response.facts.every(isFact)
-  );
-}
+type ExtractionState = 'idle' | 'submitting' | 'safe-mode' | 'success';
+type RouteState = 'idle' | 'submitting' | 'safe-mode' | 'success';
+const factLabel = (key: string) => key.replaceAll('_', ' ');
 
 export function App() {
   const sourceLabelId = useId();
   const excerptId = useId();
   const [sourceLabel, setSourceLabel] = useState('');
   const [excerpt, setExcerpt] = useState('');
+  const [facts, setFacts] = useState<Fact[]>([]);
+  const [source, setSource] = useState<'fixture' | 'gemini' | null>(null);
+  const [extraction, setExtraction] = useState<ExtractionState>('idle');
+  const [route, setRoute] = useState<RouteDecision | null>(null);
+  const [routeState, setRouteState] = useState<RouteState>('idle');
   const [formError, setFormError] = useState('');
-  const [extraction, setExtraction] = useState<ExtractionState>({ kind: 'idle' });
+  const evidence = [
+    {
+      id: 'evidence-1',
+      kind: 'document_quote',
+      sourceLabel: sourceLabel.trim(),
+      page: null,
+      excerpt: excerpt.trim(),
+    },
+  ];
 
   async function submitEvidence(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmedSourceLabel = sourceLabel.trim();
-    const trimmedExcerpt = excerpt.trim();
-
-    if (trimmedSourceLabel.length === 0 || trimmedExcerpt.length === 0) {
+    if (!sourceLabel.trim() || !excerpt.trim()) {
       setFormError('Add both a source label and an evidence excerpt before continuing.');
       return;
     }
-
     setFormError('');
-    setExtraction({ kind: 'submitting' });
-
+    setExtraction('submitting');
+    setRoute(null);
+    setRouteState('idle');
     try {
       const response = await fetch('/v1/extractions/facts', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          evidence: [
-            {
-              id: 'evidence-1',
-              kind: 'document_quote',
-              sourceLabel: trimmedSourceLabel,
-              page: null,
-              excerpt: trimmedExcerpt,
-            },
-          ],
-        }),
+        body: JSON.stringify({ evidence }),
       });
-      const payload: unknown = await response.json();
-
-      if (response.ok && isSuccessfulExtraction(payload)) {
-        setExtraction({ kind: 'success', source: payload.source, facts: payload.facts });
+      const result = extractionFromResponse(await response.json());
+      if (response.ok && result) {
+        setFacts(result.facts);
+        setSource(result.source);
+        setExtraction('success');
         return;
       }
     } catch {
-      // Every API failure receives the same safe, non-diagnostic UI treatment.
+      /* Fail closed without rendering transport or provider details. */
     }
-
-    setExtraction({ kind: 'safe-mode' });
+    setExtraction('safe-mode');
   }
-
+  function updateFact(index: number, patch: Partial<Fact>) {
+    setFacts((current) =>
+      current.map((fact, itemIndex) => (itemIndex === index ? { ...fact, ...patch } : fact)),
+    );
+  }
+  async function submitRoute() {
+    if (!facts.length || facts.some((fact) => !fact.value.trim())) {
+      setFormError('Add a value to every fact you want to check, or remove it.');
+      return;
+    }
+    setFormError('');
+    setRouteState('submitting');
+    setRoute(null);
+    try {
+      const response = await fetch('/v1/routes/prepare', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ evidence, facts }),
+      });
+      const result = routeFromResponse(await response.json());
+      if (response.ok && result) {
+        setRoute(result);
+        setRouteState('success');
+        return;
+      }
+    } catch {
+      /* Fail closed without diagnostics. */
+    }
+    setRouteState('safe-mode');
+  }
   return (
     <main className="shell" id="main-content">
       <a className="skip-link" href="#evidence-form">
@@ -104,23 +103,20 @@ export function App() {
         </p>
         <p className="notice" role="note">
           This tool provides legal information and preparation support, not legal advice. Your text
-          is only held in this browser while you use this page; document upload is not enabled.
+          is held only in this browser while you use this page; document upload is not enabled.
         </p>
       </section>
-
       <section aria-labelledby="evidence-title" className="workspace">
         <div>
-          <p className="eyebrow">Step 1 of 2</p>
+          <p className="eyebrow">Step 1 of 3</p>
           <h2 id="evidence-title">Add one evidence excerpt</h2>
           <p className="supporting-copy">
-            Use a short, relevant quote from an email, message, contract, or payslip. Do not add
-            passwords, bank details, government IDs, or anything you would not share with a trusted
-            support person.
+            Use a short relevant quote. Do not add passwords, bank details, government IDs, or
+            anything you would not share with a trusted support person.
           </p>
         </div>
-
         <form
-          aria-describedby={formError.length > 0 ? 'form-error' : undefined}
+          aria-describedby={formError ? 'form-error' : undefined}
           id="evidence-form"
           onSubmit={submitEvidence}
         >
@@ -138,57 +134,148 @@ export function App() {
             <label htmlFor={excerptId}>Evidence excerpt</label>
             <textarea
               id={excerptId}
-              maxLength={5000}
+              maxLength={2000}
               onChange={(event) => setExcerpt(event.target.value)}
               placeholder="Paste a short factual excerpt."
               rows={6}
               value={excerpt}
             />
           </div>
-          {formError.length > 0 ? (
+          {formError ? (
             <p className="form-error" id="form-error" role="alert">
               {formError}
             </p>
           ) : null}
-          <button disabled={extraction.kind === 'submitting'} type="submit">
-            {extraction.kind === 'submitting' ? 'Checking evidence…' : 'Extract facts for review'}
+          <button disabled={extraction === 'submitting'} type="submit">
+            {extraction === 'submitting' ? 'Checking evidence…' : 'Extract facts for review'}
           </button>
         </form>
-
         <section aria-atomic="true" aria-live="polite" className="result-panel">
-          {extraction.kind === 'idle' ? (
+          {extraction === 'idle' ? (
             <p>Nothing is sent until you select “Extract facts for review.”</p>
           ) : null}
-          {extraction.kind === 'submitting' ? <p>Checking only the excerpt you provided.</p> : null}
-          {extraction.kind === 'safe-mode' ? (
+          {extraction === 'safe-mode' ? (
             <div className="safe-mode" role="status">
               <h3>Fact extraction is unavailable</h3>
               <p>
-                We have not generated facts from this excerpt. Keep the original evidence, write a
-                short timeline in your own words, and consider a qualified local support service.
+                We have not generated facts from this excerpt. Keep the original evidence and
+                consider a qualified local support service.
               </p>
             </div>
           ) : null}
-          {extraction.kind === 'success' ? (
-            <div className="facts" role="status">
-              <p className="source-status">Extraction source: {extraction.source}</p>
-              <h3>Facts to review</h3>
-              {extraction.facts.length === 0 ? (
-                <p>
-                  No factual candidates were found. The original evidence remains the source of
-                  truth.
-                </p>
-              ) : (
-                <ul>
-                  {extraction.facts.map((fact) => (
-                    <li key={`${fact.key}-${fact.value}`}>
-                      <strong>{fact.key.replaceAll('_', ' ')}:</strong> {fact.value}{' '}
-                      <span>({fact.certainty})</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p>Review every item against the original evidence before relying on it.</p>
+          {extraction === 'success' ? (
+            <div className="facts">
+              <p className="source-status">Extraction source: {source}</p>
+              <h3>Step 2 of 3: confirm facts</h3>
+              <p>
+                Correct or remove every candidate before checking a preparation path. Original
+                evidence remains the source of truth.
+              </p>
+              {facts.map((fact, index) => (
+                <fieldset className="fact-card" key={`${fact.key}-${index}`}>
+                  <legend>Fact {index + 1}</legend>
+                  <label>
+                    Type
+                    <select
+                      aria-label={`Fact ${index + 1} type`}
+                      onChange={(event) =>
+                        updateFact(index, { key: event.target.value as Fact['key'] })
+                      }
+                      value={fact.key}
+                    >
+                      {factKeys.map((key) => (
+                        <option key={key} value={key}>
+                          {factLabel(key)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Value
+                    <input
+                      aria-label={`Fact ${index + 1} value`}
+                      maxLength={500}
+                      onChange={(event) => updateFact(index, { value: event.target.value })}
+                      value={fact.value}
+                    />
+                  </label>
+                  <label>
+                    Certainty
+                    <select
+                      aria-label={`Fact ${index + 1} certainty`}
+                      onChange={(event) =>
+                        updateFact(index, { certainty: event.target.value as Fact['certainty'] })
+                      }
+                      value={fact.certainty}
+                    >
+                      <option value="confirmed">confirmed</option>
+                      <option value="uncertain">uncertain</option>
+                      <option value="conflicting">conflicting</option>
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFacts((current) => current.filter((_, itemIndex) => itemIndex !== index))
+                    }
+                  >
+                    Remove fact {index + 1}
+                  </button>
+                </fieldset>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  setFacts((current) => [
+                    ...current,
+                    {
+                      key: 'case_category',
+                      value: '',
+                      certainty: 'uncertain',
+                      evidenceIds: ['evidence-1'],
+                    },
+                  ])
+                }
+              >
+                Add fact
+              </button>{' '}
+              <button disabled={routeState === 'submitting'} type="button" onClick={submitRoute}>
+                {routeState === 'submitting' ? 'Checking route…' : 'Check preparation path'}
+              </button>
+            </div>
+          ) : null}
+          {routeState === 'safe-mode' ? (
+            <div className="safe-mode" role="status">
+              <h3>Preparation path is unavailable</h3>
+              <p>
+                No route has been generated. Keep the original evidence and seek qualified support
+                if needed.
+              </p>
+            </div>
+          ) : null}
+          {routeState === 'success' && route ? (
+            <div className={`route route-${route.status}`} role="status">
+              <p className="source-status">Deterministic rule: {route.ruleId}</p>
+              <h3>
+                {route.status === 'urgent_safety_exit'
+                  ? 'Prioritise immediate safety'
+                  : route.status === 'human_review_required'
+                    ? 'Human review is needed'
+                    : route.status === 'insufficient_information'
+                      ? 'More facts are needed'
+                      : route.status === 'unsupported_scope'
+                        ? 'Human handoff is needed'
+                        : 'Preparation steps'}
+              </h3>
+              <ul>
+                {route.actions.map((action) => (
+                  <li key={action.id}>{action.label}</li>
+                ))}
+              </ul>
+              {route.missingFacts.length ? (
+                <p>Missing facts: {route.missingFacts.map(factLabel).join(', ')}.</p>
+              ) : null}
+              <p>This is preparation information, not legal advice.</p>
             </div>
           ) : null}
         </section>
