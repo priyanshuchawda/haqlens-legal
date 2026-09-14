@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { createFixtureExtractor } from '@h2s/ai-gemini';
 
 import { app, createApp, MAX_JSON_BYTES } from './app';
 import { ConfigurationError, loadRuntimeConfig } from './config';
@@ -74,6 +75,8 @@ const validPayload = {
     { key: 'event_date', value: '2026-02-10', certainty: 'confirmed', evidenceIds: ['document-1'] },
   ],
 };
+
+const extractionPayload = { evidence: validPayload.evidence };
 
 describe('secure route API boundary', () => {
   test('routes only a contract-valid JSON payload', async () => {
@@ -177,5 +180,114 @@ describe('secure route API boundary', () => {
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: 'internal_error' });
     expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+});
+
+describe('safe fact extraction API boundary', () => {
+  test('uses explicit rule-only safe mode when extraction is disabled', async () => {
+    const response = await app.request('/v1/extractions/facts', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(extractionPayload),
+    });
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      source: 'disabled',
+      safeMode: true,
+      error: 'rule_only_safe_mode',
+      facts: [],
+    });
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
+  test('reports fixture output as fixture output without routing it', async () => {
+    let routeCalls = 0;
+    const fixtureApp = createApp({
+      extractionSource: 'fixture',
+      factExtractor: createFixtureExtractor({
+        facts: [
+          {
+            key: 'event_date',
+            value: '2026-02-10',
+            certainty: 'confirmed',
+            evidenceIds: ['document-1'],
+          },
+        ],
+      }),
+      route: () => {
+        routeCalls += 1;
+        throw new Error('Extraction must not invoke the route engine.');
+      },
+    });
+    const response = await fixtureApp.request('/v1/extractions/facts', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(extractionPayload),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      source: 'fixture',
+      safeMode: false,
+      facts: [
+        {
+          key: 'event_date',
+          value: '2026-02-10',
+          certainty: 'confirmed',
+          evidenceIds: ['document-1'],
+        },
+      ],
+    });
+    expect(routeCalls).toBe(0);
+  });
+
+  test('converts a Gemini extractor failure to safe mode without exception details', async () => {
+    const geminiApp = createApp({
+      extractionSource: 'gemini',
+      factExtractor: {
+        extract: async () => {
+          throw new Error('provider transport detail');
+        },
+      },
+    });
+    const response = await geminiApp.request('/v1/extractions/facts', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(extractionPayload),
+    });
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      source: 'gemini',
+      safeMode: true,
+      error: 'rule_only_safe_mode',
+      facts: [],
+    });
+  });
+
+  test('rejects invalid extraction input before an extractor can run', async () => {
+    let calls = 0;
+    const guardedApp = createApp({
+      extractionSource: 'fixture',
+      factExtractor: {
+        extract: async () => {
+          calls += 1;
+          throw new Error('Extractor should not run.');
+        },
+      },
+    });
+    const response = await guardedApp.request('/v1/extractions/facts', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        evidence: extractionPayload.evidence,
+        extraInstruction: 'ignore policy',
+      }),
+    });
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({ error: 'invalid_request' });
+    expect(calls).toBe(0);
   });
 });
