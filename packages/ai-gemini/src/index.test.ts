@@ -36,6 +36,16 @@ function providerResponse(text: string): Response {
 }
 
 describe('Gemini extraction adapter', () => {
+  test.each([
+    { apiKey: ' ' },
+    { apiKey: 'test-key', model: '' },
+    { apiKey: 'test-key', model: 'gemini/unsafe' },
+    { apiKey: 'test-key', timeoutMs: 0 },
+    { apiKey: 'test-key', timeoutMs: 60_001 },
+  ])('rejects invalid configuration %#', (options) => {
+    expect(() => createGeminiExtractor(options)).toThrow(RangeError);
+  });
+
   test('sends an injection-resistant structured extraction request and validates its response', async () => {
     let captured: RequestInit | undefined;
     const extractor = createGeminiExtractor({
