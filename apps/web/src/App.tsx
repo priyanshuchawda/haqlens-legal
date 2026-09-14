@@ -4,13 +4,14 @@ import {
   factKeys,
   normaliseEvidenceText,
   privateJsonRequest,
+  retryAfterSeconds,
   routeFromResponse,
   type Fact,
   type RouteDecision,
 } from './api';
 
-type ExtractionState = 'idle' | 'submitting' | 'safe-mode' | 'success';
-type RouteState = 'idle' | 'submitting' | 'safe-mode' | 'success';
+type ExtractionState = 'idle' | 'submitting' | 'safe-mode' | 'rate-limited' | 'success';
+type RouteState = 'idle' | 'submitting' | 'safe-mode' | 'rate-limited' | 'success';
 const factLabel = (key: string) => key.replaceAll('_', ' ');
 type EvidenceDraft = Readonly<{ id: string; sourceLabel: string; excerpt: string }>;
 
@@ -26,6 +27,7 @@ export function App() {
   const [routeState, setRouteState] = useState<RouteState>('idle');
   const [formError, setFormError] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
+  const [retryAfter, setRetryAfter] = useState<number | null>(null);
   const extractionController = useRef<AbortController | null>(null);
   const routeController = useRef<AbortController | null>(null);
   const extractionGeneration = useRef(0);
@@ -64,6 +66,7 @@ export function App() {
     extractionController.current?.abort();
     const generation = ++extractionGeneration.current;
     setFormError('');
+    setRetryAfter(null);
     setExtraction('submitting');
     setRoute(null);
     setRouteState('idle');
@@ -74,8 +77,14 @@ export function App() {
         ...privateJsonRequest({ evidence: preparedEvidence }),
         signal: controller.signal,
       });
-      const result = extractionFromResponse(await response.json());
       if (generation !== extractionGeneration.current) return;
+      const retry = retryAfterSeconds(response);
+      if (retry !== null) {
+        setRetryAfter(retry);
+        setExtraction('rate-limited');
+        return;
+      }
+      const result = extractionFromResponse(await response.json());
       if (response.ok && result) {
         setFacts(result.facts);
         setSource(result.source);
@@ -122,12 +131,14 @@ export function App() {
     setRoute(null);
     setFacts([]);
     setSource(null);
+    setRetryAfter(null);
   }
   function clearSession() {
     invalidateEvidenceResults();
     setEvidenceDrafts([{ id: 'evidence-1', sourceLabel: '', excerpt: '' }]);
     setNextEvidenceId(2);
     setFormError('');
+    setRetryAfter(null);
     setConfirmClear(false);
   }
   async function submitRoute() {
@@ -145,6 +156,7 @@ export function App() {
     routeController.current?.abort();
     const generation = ++routeGeneration.current;
     setFormError('');
+    setRetryAfter(null);
     setRouteState('submitting');
     setRoute(null);
     const controller = new AbortController();
@@ -154,8 +166,14 @@ export function App() {
         ...privateJsonRequest({ evidence: preparedEvidence, facts }),
         signal: controller.signal,
       });
-      const result = routeFromResponse(await response.json());
       if (generation !== routeGeneration.current) return;
+      const retry = retryAfterSeconds(response);
+      if (retry !== null) {
+        setRetryAfter(retry);
+        setRouteState('rate-limited');
+        return;
+      }
+      const result = routeFromResponse(await response.json());
       if (response.ok && result) {
         setRoute(result);
         setRouteState('success');
@@ -278,6 +296,12 @@ export function App() {
               </p>
             </div>
           ) : null}
+          {extraction === 'rate-limited' ? (
+            <div className="safe-mode" role="status">
+              <h3>Please wait before trying again</h3>
+              <p>Try again in about {retryAfter} seconds. No facts were generated.</p>
+            </div>
+          ) : null}
           {extraction === 'success' ? (
             <div className="facts">
               <p className="source-status">Extraction source: {source}</p>
@@ -385,6 +409,12 @@ export function App() {
                 No route has been generated. Keep the original evidence and seek qualified support
                 if needed.
               </p>
+            </div>
+          ) : null}
+          {routeState === 'rate-limited' ? (
+            <div className="safe-mode" role="status">
+              <h3>Please wait before checking a path again</h3>
+              <p>Try again in about {retryAfter} seconds. No preparation path was generated.</p>
             </div>
           ) : null}
           {routeState === 'success' && route ? (

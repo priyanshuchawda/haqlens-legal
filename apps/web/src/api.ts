@@ -45,6 +45,12 @@ export function normaliseEvidenceText(value: string): string | null {
   return hasUnsafeControlCharacter ? null : normalised;
 }
 
+export function retryAfterSeconds(response: Response): number | null {
+  if (response.status !== 429) return null;
+  const value = Number(response.headers.get('retry-after'));
+  return Number.isSafeInteger(value) && value >= 1 && value <= 3_600 ? value : null;
+}
+
 function isFact(value: unknown): value is Fact {
   if (typeof value !== 'object' || value === null) return false;
   const fact = value as Record<string, unknown>;
