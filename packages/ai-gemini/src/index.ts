@@ -8,6 +8,9 @@ import { z } from 'zod';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_MODEL = 'gemini-2.5-flash';
+const MAX_MODEL_LENGTH = 128;
+const MAX_TIMEOUT_MS = 60_000;
+const modelNamePattern = /^[a-zA-Z0-9._-]+$/u;
 
 const providerResponseSchema = z.object({
   candidates: z
@@ -130,8 +133,21 @@ function textFromProviderResponse(value: unknown): string {
 
 export function createGeminiExtractor(options: GeminiExtractorOptions): FactExtractor {
   const fetcher = options.fetch ?? globalThis.fetch;
+  const apiKey = options.apiKey.trim();
   const model = options.model ?? DEFAULT_MODEL;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+
+  if (
+    apiKey.length === 0 ||
+    model.length === 0 ||
+    model.length > MAX_MODEL_LENGTH ||
+    !modelNamePattern.test(model) ||
+    !Number.isSafeInteger(timeoutMs) ||
+    timeoutMs < 1 ||
+    timeoutMs > MAX_TIMEOUT_MS
+  ) {
+    throw new RangeError('Gemini extractor configuration is invalid.');
+  }
 
   return {
     async extract(request) {
@@ -154,7 +170,7 @@ export function createGeminiExtractor(options: GeminiExtractorOptions): FactExtr
               method: 'POST',
               headers: {
                 'content-type': 'application/json',
-                'x-goog-api-key': options.apiKey,
+                'x-goog-api-key': apiKey,
               },
               body: JSON.stringify({
                 systemInstruction: { parts: [{ text: systemInstruction }] },
