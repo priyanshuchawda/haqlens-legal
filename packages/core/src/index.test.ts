@@ -51,6 +51,15 @@ describe('proof-to-path routing', () => {
     expect(result.ruleId).toBe('safety.immediate-danger');
   });
 
+  test('normalises an affirmative immediate-danger signal before the safety exit', () => {
+    const result = routeCase(completeInput([confirmed('immediate_danger', ' YeS ', 'email-1')]));
+
+    expect(result).toMatchObject({
+      status: 'urgent_safety_exit',
+      ruleId: 'safety.immediate-danger',
+    });
+  });
+
   test('fails safely to human review when evidence-backed facts conflict', () => {
     const result = routeCase(
       completeInput([...standardFacts(), confirmed('jurisdiction_state', 'Karnataka', 'email-1')]),
@@ -103,6 +112,17 @@ describe('proof-to-path routing', () => {
         expect.objectContaining({ basis: 'evidence', evidenceIds: ['doc-1', 'email-1'] }),
       ]),
     );
+  });
+
+  test('normalises a supported category before choosing its preparation route', () => {
+    const facts = standardFacts().map((fact) =>
+      fact.key === 'case_category' ? { ...fact, value: ' TERMINATION ' } : fact,
+    );
+
+    expect(routeCase(completeInput(facts))).toMatchObject({
+      status: 'safe_preparation_route',
+      ruleId: 'scope.termination.preparation',
+    });
   });
 
   test('is deterministic when facts arrive in a different order', () => {
