@@ -1,0 +1,40 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify, build, and test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Run static, unit, audit, and secret gates
+        run: bun run verify
+      - name: Measure unit coverage
+        run: bun run test:coverage
+      - name: Build and check client bundle
+        run: bun run build
+      - name: Install Chromium for browser checks
+        run: bunx playwright install --with-deps chromium
+      - name: Run browser journeys
+        run: bun run test:e2e
+      - name: Run accessibility scan
+        run: bun run test:a11y
