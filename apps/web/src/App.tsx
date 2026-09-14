@@ -84,7 +84,10 @@ export function App() {
         setExtraction('rate-limited');
         return;
       }
-      const result = extractionFromResponse(await response.json());
+      const result = extractionFromResponse(
+        await response.json(),
+        new Set(preparedEvidence.map((item) => item.id)),
+      );
       if (response.ok && result) {
         setFacts(result.facts);
         setSource(result.source);
