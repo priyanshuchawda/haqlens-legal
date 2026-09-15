@@ -1,4 +1,4 @@
-# Employment and Freelancer First Aid
+# Employment and Freelancer
 
 A private prototype that helps an Indian employee or freelancer prepare a clear, evidence-linked next-step packet. It provides legal information and preparation support, never legal advice or automated legal action.
 
