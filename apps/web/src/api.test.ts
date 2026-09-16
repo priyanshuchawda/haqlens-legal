@@ -4,6 +4,7 @@ import {
   documentBriefFromResponse,
   documentComparisonFromResponse,
   extractionFromResponse,
+  groundedAnswerFromResponse,
   normaliseEvidenceText,
   privateJsonRequest,
   retryAfterSeconds,
@@ -256,6 +257,38 @@ describe('untrusted browser API parsers', () => {
         },
         { ...input, anchor: { ...input.anchor, confirmed: false } },
       )?.date,
+    ).toBeNull();
+  });
+
+  test('accepts only cited answers for submitted document segments', () => {
+    const document = {
+      sourceLabel: 'Notice',
+      text: 'Payment is due.',
+      segments: [
+        { id: 'segment-1', page: null, sourceStart: 0, sourceEnd: 15, text: 'Payment is due.' },
+      ],
+    } as const;
+    expect(
+      groundedAnswerFromResponse(
+        {
+          answer: 'The document states: “Payment is due.”',
+          citation: { segmentIds: ['segment-1'] },
+          status: 'answered',
+        },
+        document,
+      )?.status,
+    ).toBe('answered');
+    expect(
+      groundedAnswerFromResponse(
+        { answer: 'Uncited answer', citation: { segmentIds: ['segment-2'] }, status: 'answered' },
+        document,
+      ),
+    ).toBeNull();
+    expect(
+      groundedAnswerFromResponse(
+        { answer: 'Invented answer', citation: null, status: 'needs_human_review' },
+        document,
+      ),
     ).toBeNull();
   });
 });
