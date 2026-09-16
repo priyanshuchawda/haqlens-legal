@@ -8,6 +8,7 @@ const expectedPaths = [
   '/v1/extractions/facts',
   '/v1/questions/document',
   '/v1/routes/prepare',
+  '/v1/sources/{topic}',
 ];
 
 if (
@@ -18,7 +19,8 @@ if (
 }
 
 for (const path of expectedPaths.slice(1)) {
-  if (document.paths[path]?.post?.responses?.['429'] === undefined) {
+  const operation = document.paths[path]?.post ?? document.paths[path]?.get;
+  if (operation?.responses?.['429'] === undefined) {
     throw new Error(`OpenAPI contract must document rate limiting for ${path}.`);
   }
 }
