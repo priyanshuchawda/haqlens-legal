@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { segmentTextDocument } from '@h2s/document';
 import {
   documentBriefFromResponse,
+  documentComparisonFromResponse,
   extractionFromResponse,
   factKeys,
   normaliseEvidenceText,
@@ -10,12 +11,14 @@ import {
   routeFromResponse,
   type Fact,
   type DocumentBrief,
+  type DocumentComparison,
   type RouteDecision,
 } from './api';
 
 type ExtractionState = 'idle' | 'submitting' | 'safe-mode' | 'rate-limited' | 'success';
 type RouteState = 'idle' | 'submitting' | 'safe-mode' | 'rate-limited' | 'success';
 type BriefState = 'idle' | 'submitting' | 'safe-mode' | 'success';
+type ComparisonState = 'idle' | 'submitting' | 'safe-mode' | 'success';
 const factLabel = (key: string) => key.replaceAll('_', ' ');
 type EvidenceDraft = Readonly<{ id: string; sourceLabel: string; excerpt: string }>;
 
@@ -31,15 +34,19 @@ export function App() {
   const [routeState, setRouteState] = useState<RouteState>('idle');
   const [brief, setBrief] = useState<DocumentBrief | null>(null);
   const [briefState, setBriefState] = useState<BriefState>('idle');
+  const [comparison, setComparison] = useState<DocumentComparison | null>(null);
+  const [comparisonState, setComparisonState] = useState<ComparisonState>('idle');
   const [formError, setFormError] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
   const extractionController = useRef<AbortController | null>(null);
   const routeController = useRef<AbortController | null>(null);
   const briefController = useRef<AbortController | null>(null);
+  const comparisonController = useRef<AbortController | null>(null);
   const extractionGeneration = useRef(0);
   const routeGeneration = useRef(0);
   const briefGeneration = useRef(0);
+  const comparisonGeneration = useRef(0);
   const clearSessionTrigger = useRef<HTMLButtonElement | null>(null);
   const clearAllDataButton = useRef<HTMLButtonElement | null>(null);
   const keepWorkingButton = useRef<HTMLButtonElement | null>(null);
@@ -177,6 +184,7 @@ export function App() {
     setFacts([]);
     setSource(null);
     invalidateBriefResult();
+    invalidateComparisonResult();
     invalidateRouteResult();
   }
   function invalidateBriefResult() {
@@ -184,6 +192,12 @@ export function App() {
     briefGeneration.current += 1;
     setBriefState('idle');
     setBrief(null);
+  }
+  function invalidateComparisonResult() {
+    comparisonController.current?.abort();
+    comparisonGeneration.current += 1;
+    setComparisonState('idle');
+    setComparison(null);
   }
   function invalidateRouteResult() {
     routeController.current?.abort();
@@ -288,6 +302,59 @@ export function App() {
     }
     if (generation !== briefGeneration.current) return;
     setBriefState('safe-mode');
+  }
+  async function submitComparison() {
+    const preparedEvidence = normalisedEvidence();
+    const [leftEvidence, rightEvidence] = preparedEvidence ?? [];
+    if (
+      leftEvidence === undefined ||
+      rightEvidence === undefined ||
+      leftEvidence.sourceLabel === null ||
+      leftEvidence.excerpt === null ||
+      rightEvidence.sourceLabel === null ||
+      rightEvidence.excerpt === null
+    ) {
+      setComparisonState('safe-mode');
+      return;
+    }
+    let left;
+    let right;
+    try {
+      left = segmentTextDocument({
+        sourceLabel: leftEvidence.sourceLabel,
+        text: leftEvidence.excerpt,
+      });
+      right = segmentTextDocument({
+        sourceLabel: rightEvidence.sourceLabel,
+        text: rightEvidence.excerpt,
+      });
+    } catch {
+      setComparisonState('safe-mode');
+      return;
+    }
+    comparisonController.current?.abort();
+    const generation = ++comparisonGeneration.current;
+    setComparison(null);
+    setComparisonState('submitting');
+    const controller = new AbortController();
+    comparisonController.current = controller;
+    try {
+      const response = await fetch('/v1/comparisons/document', {
+        ...privateJsonRequest({ left, right }),
+        signal: controller.signal,
+      });
+      if (generation !== comparisonGeneration.current) return;
+      const result = documentComparisonFromResponse(await response.json(), left, right);
+      if (response.ok && result) {
+        setComparison(result);
+        setComparisonState('success');
+        return;
+      }
+    } catch {
+      /* Fail closed without rendering transport or provider details. */
+    }
+    if (generation !== comparisonGeneration.current) return;
+    setComparisonState('safe-mode');
   }
   return (
     <main className="shell" id="main-content">
@@ -516,6 +583,15 @@ export function App() {
                   ? 'Creating source-linked brief…'
                   : 'Create source-linked excerpt brief'}
               </button>{' '}
+              <button
+                disabled={comparisonState === 'submitting' || evidence.length < 2}
+                type="button"
+                onClick={submitComparison}
+              >
+                {comparisonState === 'submitting'
+                  ? 'Comparing source excerpts…'
+                  : 'Compare first two evidence excerpts'}
+              </button>{' '}
               <button disabled={routeState === 'submitting'} type="button" onClick={submitRoute}>
                 {routeState === 'submitting' ? 'Checking route…' : 'Check preparation path'}
               </button>
@@ -569,6 +645,98 @@ export function App() {
                   <p>{segment.text}</p>
                 </blockquote>
               ))}
+            </section>
+          ) : null}
+          {comparisonState === 'safe-mode' ? (
+            <div className="safe-mode" role="status">
+              <h3>Source comparison is unavailable</h3>
+              <p>
+                No comparison was generated. Keep both original excerpts and compare them with
+                qualified local support if needed.
+              </p>
+            </div>
+          ) : null}
+          {comparisonState === 'success' && comparison ? (
+            <section aria-labelledby="comparison-title" className="document-comparison">
+              <p className="source-status">Deterministic source comparison</p>
+              <h3 id="comparison-title">Review changes between excerpts</h3>
+              <p>
+                This identifies text changes only. It does not determine legal meaning, rights, or
+                obligations.
+              </p>
+              {comparison.changes.length === 0 ? (
+                <p>No text changes were found after whitespace and case normalization.</p>
+              ) : (
+                <ol>
+                  {comparison.changes.map((change, index) => (
+                    <li key={`${change.kind}-${index}`}>
+                      <h4>
+                        {change.kind === 'added'
+                          ? 'Added excerpt'
+                          : change.kind === 'removed'
+                            ? 'Removed excerpt'
+                            : 'Changed excerpt'}
+                      </h4>
+                      {change.leftSegmentIds ? (
+                        <p>
+                          Earlier:{' '}
+                          {change.leftSegmentIds.map((segmentId, sourceIndex) => {
+                            const indexInDocument = comparison.left.segments.findIndex(
+                              (segment) => segment.id === segmentId,
+                            );
+                            return (
+                              <span key={segmentId}>
+                                {sourceIndex > 0 ? ', ' : null}
+                                <a href={`#comparison-left-${segmentId}`}>
+                                  {comparison.left.sourceLabel}, excerpt {indexInDocument + 1}
+                                </a>
+                              </span>
+                            );
+                          })}
+                        </p>
+                      ) : null}
+                      {change.rightSegmentIds ? (
+                        <p>
+                          Revised:{' '}
+                          {change.rightSegmentIds.map((segmentId, sourceIndex) => {
+                            const indexInDocument = comparison.right.segments.findIndex(
+                              (segment) => segment.id === segmentId,
+                            );
+                            return (
+                              <span key={segmentId}>
+                                {sourceIndex > 0 ? ', ' : null}
+                                <a href={`#comparison-right-${segmentId}`}>
+                                  {comparison.right.sourceLabel}, excerpt {indexInDocument + 1}
+                                </a>
+                              </span>
+                            );
+                          })}
+                        </p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+              )}
+              <div className="comparison-sources">
+                <section aria-labelledby="earlier-source-title">
+                  <h4 id="earlier-source-title">Earlier source: {comparison.left.sourceLabel}</h4>
+                  {comparison.left.segments.map((segment, index) => (
+                    <blockquote id={`comparison-left-${segment.id}`} key={segment.id}>
+                      <p>Excerpt {index + 1}</p>
+                      <p>{segment.text}</p>
+                    </blockquote>
+                  ))}
+                </section>
+                <section aria-labelledby="revised-source-title">
+                  <h4 id="revised-source-title">Revised source: {comparison.right.sourceLabel}</h4>
+                  {comparison.right.segments.map((segment, index) => (
+                    <blockquote id={`comparison-right-${segment.id}`} key={segment.id}>
+                      <p>Excerpt {index + 1}</p>
+                      <p>{segment.text}</p>
+                    </blockquote>
+                  ))}
+                </section>
+              </div>
             </section>
           ) : null}
           {routeState === 'safe-mode' ? (

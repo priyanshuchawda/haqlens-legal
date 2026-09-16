@@ -37,6 +37,12 @@ function spyOnFetch(response: () => Promise<Response> = async () => new Response
   };
 }
 
+function secondLabeledControl(label: string): HTMLElement {
+  const control = screen.getAllByLabelText(label)[1];
+  if (control === undefined) throw new Error(`Expected a second ${label} control.`);
+  return control;
+}
+
 describe('App component', () => {
   test('renders the local-only safety boundary and bounded evidence controls', () => {
     render(<App />);
@@ -388,6 +394,123 @@ describe('App component', () => {
         await screen.findByRole('heading', { name: 'Source-linked brief is unavailable' }),
       ).toBeDefined();
       expect(screen.queryByText('Substituted source text.')).toBeNull();
+    } finally {
+      fetchSpy.restore();
+    }
+  });
+
+  test('renders a deterministic comparison with links to both source excerpts', async () => {
+    const user = userEvent.setup();
+    let responseNumber = 0;
+    const left = {
+      sourceLabel: 'Earlier agreement',
+      text: 'Old clause.',
+      segments: [
+        { id: 'segment-1', page: null, sourceStart: 0, sourceEnd: 11, text: 'Old clause.' },
+      ],
+    };
+    const right = {
+      sourceLabel: 'Revised agreement',
+      text: 'New clause.',
+      segments: [
+        { id: 'segment-1', page: null, sourceStart: 0, sourceEnd: 11, text: 'New clause.' },
+      ],
+    };
+    const fetchSpy = spyOnFetch(async () => {
+      responseNumber += 1;
+      return responseNumber === 1
+        ? Response.json({
+            source: 'fixture',
+            safeMode: false,
+            facts: [
+              {
+                key: 'event_date',
+                value: '2026-02-10',
+                certainty: 'confirmed',
+                evidenceIds: ['evidence-1'],
+              },
+            ],
+          })
+        : Response.json({
+            left,
+            right,
+            changes: [
+              { kind: 'changed', leftSegmentIds: ['segment-1'], rightSegmentIds: ['segment-1'] },
+            ],
+          });
+    });
+
+    try {
+      render(<App />);
+      await user.type(screen.getByLabelText('Source label'), left.sourceLabel);
+      await user.type(screen.getByLabelText('Evidence excerpt'), left.text);
+      await user.click(screen.getByRole('button', { name: 'Add evidence' }));
+      await user.type(secondLabeledControl('Source label'), right.sourceLabel);
+      await user.type(secondLabeledControl('Evidence excerpt'), right.text);
+      await user.click(screen.getByRole('button', { name: 'Extract facts for review' }));
+      await screen.findByRole('heading', { name: 'Step 2 of 3: confirm facts' });
+      await user.click(screen.getByRole('button', { name: 'Compare first two evidence excerpts' }));
+
+      expect(
+        await screen.findByRole('heading', { name: 'Review changes between excerpts' }),
+      ).toBeDefined();
+      expect(screen.getByRole('heading', { name: 'Changed excerpt' })).toBeDefined();
+      expect(
+        screen.getByRole('link', { name: 'Earlier agreement, excerpt 1' }).getAttribute('href'),
+      ).toBe('#comparison-left-segment-1');
+      expect(
+        screen.getByRole('link', { name: 'Revised agreement, excerpt 1' }).getAttribute('href'),
+      ).toBe('#comparison-right-segment-1');
+      expect(fetchSpy.requests()).toBe(2);
+    } finally {
+      fetchSpy.restore();
+    }
+  });
+
+  test('fails closed when a comparison response swaps the submitted source document', async () => {
+    const user = userEvent.setup();
+    let responseNumber = 0;
+    const fetchSpy = spyOnFetch(async () => {
+      responseNumber += 1;
+      return responseNumber === 1
+        ? Response.json({
+            source: 'fixture',
+            safeMode: false,
+            facts: [
+              {
+                key: 'event_date',
+                value: '2026-02-10',
+                certainty: 'confirmed',
+                evidenceIds: ['evidence-1'],
+              },
+            ],
+          })
+        : Response.json({
+            left: {
+              sourceLabel: 'Swapped source detail',
+              text: 'Swapped source detail',
+              segments: [],
+            },
+            right: {},
+            changes: [],
+          });
+    });
+
+    try {
+      render(<App />);
+      await user.type(screen.getByLabelText('Source label'), 'Earlier agreement');
+      await user.type(screen.getByLabelText('Evidence excerpt'), 'Old clause.');
+      await user.click(screen.getByRole('button', { name: 'Add evidence' }));
+      await user.type(secondLabeledControl('Source label'), 'Revised agreement');
+      await user.type(secondLabeledControl('Evidence excerpt'), 'New clause.');
+      await user.click(screen.getByRole('button', { name: 'Extract facts for review' }));
+      await screen.findByRole('heading', { name: 'Step 2 of 3: confirm facts' });
+      await user.click(screen.getByRole('button', { name: 'Compare first two evidence excerpts' }));
+
+      expect(
+        await screen.findByRole('heading', { name: 'Source comparison is unavailable' }),
+      ).toBeDefined();
+      expect(screen.queryByText('Swapped source detail')).toBeNull();
     } finally {
       fetchSpy.restore();
     }

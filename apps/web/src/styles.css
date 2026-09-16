@@ -204,6 +204,48 @@ button:disabled {
   color: #bae6fd;
 }
 
+.document-comparison {
+  border-top: 1px solid #475569;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.document-comparison ol {
+  padding-left: 1.5rem;
+}
+
+.document-comparison li {
+  border: 1px solid #475569;
+  border-radius: 0.5rem;
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+}
+
+.document-comparison h4 {
+  margin-top: 0;
+}
+
+.document-comparison a {
+  color: #bae6fd;
+}
+
+.comparison-sources {
+  display: grid;
+  gap: 1rem;
+}
+
+.comparison-sources blockquote {
+  background: #111c30;
+  border-left: 0.25rem solid #a5b4fc;
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+}
+
+.comparison-sources blockquote p:first-child {
+  color: #c4b5fd;
+  font-weight: 700;
+}
+
 .fact-card {
   border: 1px solid #475569;
   border-radius: 0.5rem;
