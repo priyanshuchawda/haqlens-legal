@@ -7,12 +7,14 @@ import {
   extractionFromResponse,
   factKeys,
   groundedAnswerFromResponse,
+  officialSourcesFromResponse,
   normaliseEvidenceText,
   privateJsonRequest,
   retryAfterSeconds,
   routeFromResponse,
   type Fact,
   type GroundedAnswer,
+  type OfficialSource,
   type DocumentBrief,
   type DocumentComparison,
   type DateCalculationResult,
@@ -54,6 +56,8 @@ export function App() {
   const [packetPreview, setPacketPreview] = useState<string | null>(null);
   const [packetError, setPacketError] = useState('');
   const [fileIntakeStatus, setFileIntakeStatus] = useState('');
+  const [sourceTopic, setSourceTopic] = useState('legal_aid');
+  const [officialSources, setOfficialSources] = useState<OfficialSource[] | null>(null);
   const [dateFormError, setDateFormError] = useState('');
   const [formError, setFormError] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
@@ -281,6 +285,16 @@ export function App() {
       setFileIntakeStatus('Text file added locally to Evidence 1. It has not been uploaded.');
     } catch {
       setFileIntakeStatus('The file could not be safely read. No content was added or uploaded.');
+    }
+  }
+  async function loadOfficialSources() {
+    setOfficialSources(null);
+    try {
+      const response = await fetch(`/v1/sources/${sourceTopic}`, { cache: 'no-store' });
+      const sources = officialSourcesFromResponse(await response.json());
+      if (response.ok && sources) setOfficialSources(sources);
+    } catch {
+      /* Do not expose transport details. */
     }
   }
   async function submitRoute() {
@@ -608,6 +622,33 @@ export function App() {
         >
           Clear this session
         </button>
+        <section aria-labelledby="official-sources-title">
+          <h2 id="official-sources-title">Reviewed official support links</h2>
+          <label>
+            Support topic
+            <select value={sourceTopic} onChange={(event) => setSourceTopic(event.target.value)}>
+              <option value="legal_aid">Legal aid</option>
+              <option value="employment_dispute">Employment dispute</option>
+              <option value="consumer_dispute">Consumer dispute</option>
+              <option value="public_grievance">Public grievance</option>
+            </select>
+          </label>{' '}
+          <button type="button" onClick={() => void loadOfficialSources()}>
+            Show reviewed sources
+          </button>
+          {officialSources ? (
+            <ul>
+              {officialSources.map((source) => (
+                <li key={source.url}>
+                  <a href={source.url} rel="noreferrer" target="_blank">
+                    {source.title}
+                  </a>{' '}
+                  — {source.authority}; reviewed {source.reviewedOn}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
       </section>
       {confirmClear ? (
         <div className="confirm-backdrop">
