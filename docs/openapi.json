@@ -91,6 +91,34 @@
           "429": { "description": "Rate limited; Retry-After is set" }
         }
       }
+    },
+    "/v1/comparisons/document": {
+      "post": {
+        "description": "Align two bounded segmented documents deterministically. Returns only source-scoped additions, removals, and changes; it does not provide legal interpretation. 64 KiB JSON limit; no-store response.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DocumentComparisonInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deterministic source-aligned comparison",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DocumentComparison" }
+              }
+            }
+          },
+          "400": { "description": "Invalid JSON" },
+          "413": { "description": "Payload too large" },
+          "415": { "description": "JSON required" },
+          "422": { "description": "Invalid source-exact segmented documents" },
+          "429": { "description": "Rate limited; Retry-After is set" }
+        }
+      }
     }
   },
   "components": {
@@ -165,6 +193,41 @@
         },
         "additionalProperties": false,
         "description": "Every citation segment ID must exist in document.segments."
+      },
+      "DocumentComparisonInput": {
+        "type": "object",
+        "required": ["left", "right"],
+        "properties": {
+          "left": { "$ref": "#/components/schemas/SegmentedDocument" },
+          "right": { "$ref": "#/components/schemas/SegmentedDocument" }
+        },
+        "additionalProperties": false
+      },
+      "DocumentComparison": {
+        "allOf": [
+          { "$ref": "#/components/schemas/DocumentComparisonInput" },
+          {
+            "type": "object",
+            "required": ["changes"],
+            "properties": {
+              "changes": {
+                "type": "array",
+                "maxItems": 500,
+                "items": {
+                  "type": "object",
+                  "required": ["kind", "leftSegmentIds", "rightSegmentIds"],
+                  "properties": {
+                    "kind": { "type": "string", "enum": ["added", "removed", "changed"] },
+                    "leftSegmentIds": { "type": ["array", "null"], "maxItems": 10 },
+                    "rightSegmentIds": { "type": ["array", "null"], "maxItems": 10 }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        ],
+        "description": "Each change is added, removed, or changed and references only the correct document side."
       }
     }
   }

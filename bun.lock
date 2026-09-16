@@ -31,6 +31,7 @@
         "@h2s/ai-gemini": "workspace:*",
         "@h2s/contracts": "workspace:*",
         "@h2s/core": "workspace:*",
+        "@h2s/document": "workspace:*",
         "hono": "4.13.7",
         "zod": "4.6.5",
       },

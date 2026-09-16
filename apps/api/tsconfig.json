@@ -18,7 +18,8 @@
   "references": [
     { "path": "../../packages/ai-gemini" },
     { "path": "../../packages/contracts" },
-    { "path": "../../packages/core" }
+    { "path": "../../packages/core" },
+    { "path": "../../packages/document" }
   ],
   "include": ["src/**/*.ts"]
 }

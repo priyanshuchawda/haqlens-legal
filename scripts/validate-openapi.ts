@@ -3,6 +3,7 @@ const document = await Bun.file('docs/openapi.json').json();
 const expectedPaths = [
   '/health',
   '/v1/briefs/document',
+  '/v1/comparisons/document',
   '/v1/extractions/facts',
   '/v1/routes/prepare',
 ];
@@ -25,6 +26,14 @@ const briefSchema =
     ?.schema?.$ref;
 if (briefSchema !== '#/components/schemas/DocumentBrief') {
   throw new Error('OpenAPI contract must describe a source-linked document brief response.');
+}
+
+const comparisonSchema =
+  document.paths['/v1/comparisons/document']?.post?.responses?.['200']?.content?.[
+    'application/json'
+  ]?.schema?.$ref;
+if (comparisonSchema !== '#/components/schemas/DocumentComparison') {
+  throw new Error('OpenAPI contract must describe a source-aligned document comparison response.');
 }
 
 console.info('OpenAPI contract validation passed.');
