@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   createFixtureExtractor,
   createGeminiExtractor,
+  createGeminiTranscriber,
   type ExtractionFailure,
   type ExtractionRequest,
   type ExtractionResult,
@@ -135,5 +136,48 @@ describe('Gemini extraction adapter', () => {
     const extractor = createFixtureExtractor(validExtraction);
 
     await expect(extractor.extract(request)).resolves.toEqual(validExtraction);
+  });
+});
+
+describe('Gemini transcription adapter', () => {
+  const transcription = {
+    sourceLabel: 'Scan',
+    mimeType: 'image/png' as const,
+    dataBase64: 'c2Nhbi1ieXRlcw==',
+  };
+
+  test('uses strict structured multimodal output and keeps transcription unconfirmed', async () => {
+    let captured: RequestInit | undefined;
+    const transcriber = createGeminiTranscriber({
+      apiKey: 'test-key',
+      fetch: async (_url, init) => {
+        captured = init;
+        return providerResponse(
+          JSON.stringify({ pages: [{ page: 1, confidence: 0.8, text: 'Scan text.' }] }),
+        );
+      },
+    });
+    await expect(transcriber.transcribe(transcription)).resolves.toEqual({
+      confirmed: false,
+      sourceLabel: 'Scan',
+      pages: [{ page: 1, confidence: 0.8, text: 'Scan text.' }],
+    });
+    const body = JSON.parse(String(captured?.body)) as {
+      contents: Array<{ parts: Array<{ inlineData: { mimeType: string } }> }>;
+    };
+    expect(body.contents[0]?.parts[0]?.inlineData.mimeType).toBe('image/png');
+  });
+
+  test('fails closed for unsafe input and malformed provider output', async () => {
+    const transcriber = createGeminiTranscriber({
+      apiKey: 'test-key',
+      fetch: async () => providerResponse(JSON.stringify({ pages: [] })),
+    });
+    await expect(
+      transcriber.transcribe({ ...transcription, mimeType: 'text/plain' as never }),
+    ).rejects.toMatchObject({ code: 'invalid_model_output' });
+    await expect(transcriber.transcribe(transcription)).rejects.toMatchObject({
+      code: 'invalid_model_output',
+    });
   });
 });
