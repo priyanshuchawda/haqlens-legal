@@ -498,3 +498,54 @@ describe('document comparison API boundary', () => {
     expect(await response.json()).toEqual({ error: 'invalid_request' });
   });
 });
+
+describe('confirmed date calculation API boundary', () => {
+  const confirmedInput = {
+    anchor: {
+      confirmed: true,
+      date: '2026-02-10',
+      citation: { segmentIds: ['segment-1'] },
+    },
+    offsetDays: 30,
+  };
+
+  test('returns calendar arithmetic only for an explicitly confirmed anchor', async () => {
+    const response = await app.request('/v1/dates/calculate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(confirmedInput),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      anchor: confirmedInput.anchor,
+      date: '2026-03-12',
+      offsetDays: 30,
+      status: 'confirmed',
+    });
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
+  test('withholds a calculated date from an unconfirmed or malformed anchor', async () => {
+    const unconfirmed = await app.request('/v1/dates/calculate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ...confirmedInput,
+        anchor: { ...confirmedInput.anchor, confirmed: false },
+      }),
+    });
+    const malformed = await app.request('/v1/dates/calculate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ...confirmedInput,
+        anchor: { ...confirmedInput.anchor, date: '2026-02-30' },
+      }),
+    });
+
+    expect(await unconfirmed.json()).toMatchObject({ date: null, status: 'needs_human_review' });
+    expect(malformed.status).toBe(422);
+    expect(await malformed.json()).toEqual({ error: 'invalid_request' });
+  });
+});

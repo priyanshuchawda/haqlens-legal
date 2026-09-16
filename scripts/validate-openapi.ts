@@ -4,6 +4,7 @@ const expectedPaths = [
   '/health',
   '/v1/briefs/document',
   '/v1/comparisons/document',
+  '/v1/dates/calculate',
   '/v1/extractions/facts',
   '/v1/routes/prepare',
 ];
@@ -34,6 +35,13 @@ const comparisonSchema =
   ]?.schema?.$ref;
 if (comparisonSchema !== '#/components/schemas/DocumentComparison') {
   throw new Error('OpenAPI contract must describe a source-aligned document comparison response.');
+}
+
+const dateSchema =
+  document.paths['/v1/dates/calculate']?.post?.responses?.['200']?.content?.['application/json']
+    ?.schema?.$ref;
+if (dateSchema !== '#/components/schemas/DateCalculationResult') {
+  throw new Error('OpenAPI contract must describe a confirmed-only date calculation response.');
 }
 
 console.info('OpenAPI contract validation passed.');

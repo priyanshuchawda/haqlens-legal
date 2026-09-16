@@ -119,6 +119,34 @@
           "429": { "description": "Rate limited; Retry-After is set" }
         }
       }
+    },
+    "/v1/dates/calculate": {
+      "post": {
+        "description": "Add an explicit calendar-day offset to a user-confirmed, source-linked ISO date. It does not infer legal deadlines, statutory periods, or consequences. 64 KiB JSON limit; no-store response.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DateCalculationInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Confirmed date or human-review result",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DateCalculationResult" }
+              }
+            }
+          },
+          "400": { "description": "Invalid JSON" },
+          "413": { "description": "Payload too large" },
+          "415": { "description": "JSON required" },
+          "422": { "description": "Invalid calendar date or request" },
+          "429": { "description": "Rate limited; Retry-After is set" }
+        }
+      }
     }
   },
   "components": {
@@ -228,6 +256,38 @@
           }
         ],
         "description": "Each change is added, removed, or changed and references only the correct document side."
+      },
+      "DateCalculationInput": {
+        "type": "object",
+        "required": ["anchor", "offsetDays"],
+        "properties": {
+          "anchor": {
+            "type": "object",
+            "required": ["confirmed", "date", "citation"],
+            "properties": {
+              "confirmed": { "type": "boolean" },
+              "date": { "type": "string", "format": "date" },
+              "citation": { "$ref": "#/components/schemas/DocumentCitation" }
+            },
+            "additionalProperties": false
+          },
+          "offsetDays": { "type": "integer", "minimum": 0, "maximum": 3650 }
+        },
+        "additionalProperties": false
+      },
+      "DateCalculationResult": {
+        "allOf": [
+          { "$ref": "#/components/schemas/DateCalculationInput" },
+          {
+            "type": "object",
+            "required": ["date", "status"],
+            "properties": {
+              "date": { "type": ["string", "null"], "format": "date" },
+              "status": { "type": "string", "enum": ["confirmed", "needs_human_review"] }
+            }
+          }
+        ],
+        "description": "date is null unless the source anchor was explicitly confirmed."
       }
     }
   }
