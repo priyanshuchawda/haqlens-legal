@@ -6,6 +6,8 @@ import {
   documentComparisonSchema,
   dateCalculationInputSchema,
   dateCalculationResultSchema,
+  groundedAnswerSchema,
+  groundedQuestionInputSchema,
   documentTextInputSchema,
   factExtractionInputSchema,
   officialSourceSchema,
@@ -325,6 +327,46 @@ describe('confirmed date contracts', () => {
         date: '2026-03-12',
         offsetDays: 30,
         status: 'confirmed',
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('grounded question contracts', () => {
+  const document = {
+    sourceLabel: 'Notice',
+    text: 'Payment is due.',
+    segments: [
+      { id: 'segment-1', page: null, sourceStart: 0, sourceEnd: 15, text: 'Payment is due.' },
+    ],
+  };
+
+  test('requires a bounded current-document question and a cited answer', () => {
+    expect(
+      groundedQuestionInputSchema.safeParse({ document, question: 'What does this say?' }).success,
+    ).toBe(true);
+    expect(
+      groundedAnswerSchema.safeParse({
+        status: 'answered',
+        answer: 'The excerpt says payment is due.',
+        citation: { segmentIds: ['segment-1'] },
+      }).success,
+    ).toBe(true);
+  });
+
+  test('rejects uncited answers and unsupported answer content in review mode', () => {
+    expect(
+      groundedAnswerSchema.safeParse({
+        status: 'answered',
+        answer: 'Uncited claim.',
+        citation: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      groundedAnswerSchema.safeParse({
+        status: 'needs_human_review',
+        answer: 'Maybe.',
+        citation: null,
       }).success,
     ).toBe(false);
   });

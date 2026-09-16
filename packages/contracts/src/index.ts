@@ -250,6 +250,33 @@ export const dateCalculationResultSchema = z
     });
   });
 
+export const groundedQuestionInputSchema = z
+  .object({
+    document: segmentedDocumentSchema,
+    question: z.string().trim().min(1).max(1_000),
+  })
+  .strict();
+
+export const groundedAnswerSchema = z
+  .object({
+    answer: z.string().trim().min(1).max(2_000).nullable(),
+    citation: documentCitationSchema.nullable(),
+    status: z.enum(['answered', 'needs_human_review']),
+  })
+  .strict()
+  .superRefine((answer, context) => {
+    const valid =
+      (answer.status === 'answered' && answer.answer !== null && answer.citation !== null) ||
+      (answer.status === 'needs_human_review' &&
+        answer.answer === null &&
+        answer.citation === null);
+    if (valid) return;
+    context.addIssue({
+      code: 'custom',
+      message: 'An answer must be cited, and a review result must not invent an answer.',
+    });
+  });
+
 export const caseCategorySchema = z.enum([
   'unpaid_work',
   'termination',
@@ -443,6 +470,8 @@ export type DocumentComparison = z.infer<typeof documentComparisonSchema>;
 export type DocumentComparisonInput = z.infer<typeof documentComparisonInputSchema>;
 export type DateCalculationInput = z.infer<typeof dateCalculationInputSchema>;
 export type DateCalculationResult = z.infer<typeof dateCalculationResultSchema>;
+export type GroundedQuestionInput = z.infer<typeof groundedQuestionInputSchema>;
+export type GroundedAnswer = z.infer<typeof groundedAnswerSchema>;
 export type SegmentedDocument = z.infer<typeof segmentedDocumentSchema>;
 export type OfficialSource = z.infer<typeof officialSourceSchema>;
 export type OfficialSourceTopic = z.infer<typeof officialSourceTopicSchema>;
