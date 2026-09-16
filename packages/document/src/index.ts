@@ -4,6 +4,7 @@ import {
   MAX_DOCUMENT_SEGMENTS,
   MAX_SEGMENT_CHARS,
   segmentedDocumentSchema,
+  transcriptionReviewSchema,
   type SegmentedDocument,
   type DocumentTextInput,
   type TranscriptionReview,
@@ -73,9 +74,10 @@ export function segmentTextDocument(input: DocumentTextInput) {
 }
 
 /** Makes OCR/transcription usable only after explicit user confirmation, preserving page order. */
-export function confirmedTranscriptionText(review: TranscriptionReview): string | null {
-  if (!review.confirmed) return null;
-  return review.pages
+export function confirmedTranscriptionText(review: TranscriptionReview | unknown): string | null {
+  const parsed = transcriptionReviewSchema.parse(review);
+  if (!parsed.confirmed) return null;
+  return parsed.pages
     .toSorted((left, right) => left.page - right.page)
     .map((page) => page.text)
     .join('\n\n');
