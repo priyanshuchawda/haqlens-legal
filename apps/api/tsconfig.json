@@ -19,7 +19,8 @@
     { "path": "../../packages/ai-gemini" },
     { "path": "../../packages/contracts" },
     { "path": "../../packages/core" },
-    { "path": "../../packages/document" }
+    { "path": "../../packages/document" },
+    { "path": "../../packages/official-sources" }
   ],
   "include": ["src/**/*.ts"]
 }

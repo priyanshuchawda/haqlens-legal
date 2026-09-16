@@ -175,6 +175,27 @@
           "429": { "description": "Rate limited; Retry-After is set" }
         }
       }
+    },
+    "/v1/sources/{topic}": {
+      "get": {
+        "description": "Resolve a generic validated topic against the reviewed local official-source manifest. The service does not send document content to web search.",
+        "parameters": [
+          {
+            "name": "topic",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["consumer_dispute", "employment_dispute", "legal_aid", "public_grievance"]
+            }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Reviewed local official sources" },
+          "422": { "description": "Invalid topic" },
+          "429": { "description": "Rate limited; Retry-After is set" }
+        }
+      }
     }
   },
   "components": {

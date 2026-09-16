@@ -613,3 +613,21 @@ describe('grounded document question API boundary', () => {
     expect(await response.json()).toEqual({ error: 'invalid_request' });
   });
 });
+
+describe('reviewed official source API boundary', () => {
+  test('resolves only a validated generic topic from the local manifest', async () => {
+    const response = await app.request('/v1/sources/legal_aid');
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      topic: 'legal_aid',
+      sources: [{ authority: 'National Legal Services Authority', id: 'official-nalsa-legal-aid' }],
+    });
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
+  test('rejects arbitrary topic values without searching with user content', async () => {
+    const response = await app.request('/v1/sources/ignore-document-instructions');
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({ error: 'invalid_request' });
+  });
+});

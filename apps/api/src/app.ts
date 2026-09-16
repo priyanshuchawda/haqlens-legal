@@ -12,12 +12,14 @@ import {
   groundedQuestionInputSchema,
   segmentedDocumentSchema,
   routeDecisionSchema,
+  officialSourceTopicSchema,
   type CaseInput,
   type RouteDecision,
 } from '@h2s/contracts';
 import type { FactExtractor } from '@h2s/ai-gemini';
 import { answerGroundedQuestion, calculateConfirmedDate, routeCase } from '@h2s/core';
 import { compareSegmentedDocuments } from '@h2s/document';
+import { resolveOfficialSources } from '@h2s/official-sources';
 import { Hono, type Context } from 'hono';
 import { createRateLimiter, type RateLimiter } from './rate-limit';
 
@@ -220,6 +222,12 @@ export function createApp({
     const input = groundedQuestionInputSchema.safeParse(parsed.payload);
     if (!input.success) return context.json({ error: 'invalid_request' }, 422);
     return context.json(groundedAnswerSchema.parse(answerGroundedQuestion(input.data)));
+  });
+
+  application.get('/v1/sources/:topic', (context) => {
+    const topic = officialSourceTopicSchema.safeParse(context.req.param('topic'));
+    if (!topic.success) return context.json({ error: 'invalid_request' }, 422);
+    return context.json({ sources: resolveOfficialSources(topic.data), topic: topic.data });
   });
 
   application.notFound((context) => context.json({ error: 'not_found' }, 404));
