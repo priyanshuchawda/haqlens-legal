@@ -3,6 +3,7 @@ import {
   caseInputSchema,
   documentCitationSchema,
   documentBriefSchema,
+  documentComparisonSchema,
   documentTextInputSchema,
   factExtractionInputSchema,
   officialSourceSchema,
@@ -228,6 +229,62 @@ describe('cited brief contracts', () => {
             citation: { segmentIds: ['segment-2'] },
           },
         ],
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('document comparison contracts', () => {
+  const left = {
+    sourceLabel: 'Earlier agreement',
+    text: 'Payment is due.',
+    segments: [
+      { id: 'segment-1', page: null, sourceStart: 0, sourceEnd: 15, text: 'Payment is due.' },
+    ],
+  };
+  const right = {
+    sourceLabel: 'Revised agreement',
+    text: 'Payment is due later.',
+    segments: [
+      {
+        id: 'segment-1',
+        page: null,
+        sourceStart: 0,
+        sourceEnd: 21,
+        text: 'Payment is due later.',
+      },
+    ],
+  };
+
+  test('accepts only source-scoped change records', () => {
+    expect(
+      documentComparisonSchema.safeParse({
+        left,
+        right,
+        changes: [
+          {
+            kind: 'changed',
+            leftSegmentIds: ['segment-1'],
+            rightSegmentIds: ['segment-1'],
+          },
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  test('rejects change kinds and citations that do not match their document side', () => {
+    expect(
+      documentComparisonSchema.safeParse({
+        left,
+        right,
+        changes: [{ kind: 'added', leftSegmentIds: ['segment-1'], rightSegmentIds: null }],
+      }).success,
+    ).toBe(false);
+    expect(
+      documentComparisonSchema.safeParse({
+        left,
+        right,
+        changes: [{ kind: 'removed', leftSegmentIds: ['segment-2'], rightSegmentIds: null }],
       }).success,
     ).toBe(false);
   });
