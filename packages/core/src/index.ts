@@ -71,6 +71,17 @@ export function calculateConfirmedDate(input: DateCalculationInput): DateCalcula
   });
 }
 
+/** Screens direct instruction-like text before a document-grounded question can reach a provider. */
+export function requiresGroundedQuestionReview(question: string): boolean {
+  const normalised = question.trim().toLocaleLowerCase('en-US').replaceAll(/\s+/gu, ' ');
+  return [
+    /ignore (all |any |the )?(previous|prior|above) (instructions|rules)/u,
+    /reveal (the )?(system|developer) (prompt|instructions)/u,
+    /act as (a |an )?(system|developer|assistant)/u,
+    /follow (these|my) instructions/u,
+  ].some((pattern) => pattern.test(normalised));
+}
+
 function missingFactKeys(grouped: ReadonlyMap<FactKey, readonly CaseFact[]>): FactKey[] {
   return requiredFacts.filter(
     (key) => grouped.get(key)?.some((fact) => fact.certainty === 'confirmed') !== true,
