@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   caseInputSchema,
   documentCitationSchema,
+  documentBriefSchema,
   documentTextInputSchema,
   factExtractionInputSchema,
   officialSourceSchema,
@@ -182,6 +183,45 @@ describe('official-source contracts', () => {
     ).toBe(false);
     expect(
       officialSourceSchema.safeParse({ ...source, url: 'http://nalsa.gov.in/legal-aid/' }).success,
+    ).toBe(false);
+  });
+});
+
+describe('cited brief contracts', () => {
+  const document = {
+    sourceLabel: 'Notice',
+    text: 'Payment is due.',
+    segments: [
+      { id: 'segment-1', page: null, sourceStart: 0, sourceEnd: 15, text: 'Payment is due.' },
+    ],
+  };
+
+  test('reject orphaned citations before a brief can render', () => {
+    expect(
+      documentBriefSchema.safeParse({
+        document,
+        items: [
+          {
+            kind: 'risk',
+            severity: 'high',
+            text: 'Payment risk.',
+            citation: { segmentIds: ['segment-1'] },
+          },
+        ],
+      }).success,
+    ).toBe(true);
+    expect(
+      documentBriefSchema.safeParse({
+        document,
+        items: [
+          {
+            kind: 'risk',
+            severity: 'high',
+            text: 'Payment risk.',
+            citation: { segmentIds: ['segment-2'] },
+          },
+        ],
+      }).success,
     ).toBe(false);
   });
 });
