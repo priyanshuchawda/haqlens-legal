@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  dateCalculationFromResponse,
   documentBriefFromResponse,
   documentComparisonFromResponse,
   extractionFromResponse,
@@ -222,6 +223,39 @@ describe('untrusted browser API parsers', () => {
         left,
         right,
       ),
+    ).toBeNull();
+  });
+
+  test('accepts only a confirmed or withheld date for its exact submitted anchor', () => {
+    const input = {
+      anchor: { confirmed: true, date: '2026-02-10', citation: { segmentIds: ['segment-1'] } },
+      offsetDays: 30,
+    } as const;
+    expect(
+      dateCalculationFromResponse({ ...input, date: '2026-03-12', status: 'confirmed' }, input)
+        ?.date,
+    ).toBe('2026-03-12');
+    expect(
+      dateCalculationFromResponse(
+        {
+          ...input,
+          anchor: { ...input.anchor, date: '2026-02-11' },
+          date: '2026-03-13',
+          status: 'confirmed',
+        },
+        input,
+      ),
+    ).toBeNull();
+    expect(
+      dateCalculationFromResponse(
+        {
+          ...input,
+          anchor: { ...input.anchor, confirmed: false },
+          date: null,
+          status: 'needs_human_review',
+        },
+        { ...input, anchor: { ...input.anchor, confirmed: false } },
+      )?.date,
     ).toBeNull();
   });
 });

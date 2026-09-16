@@ -280,6 +280,42 @@ button:disabled {
   gap: 0.35rem;
 }
 
+.date-calculator {
+  border: 1px solid #475569;
+  border-radius: 0.5rem;
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
+  padding: 1rem;
+}
+
+.date-calculator label:not(.confirmation-control) {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.date-calculator select {
+  background: #0b1220;
+  border: 1px solid #64748b;
+  border-radius: 0.5rem;
+  color: #f8fafc;
+  padding: 0.6rem;
+}
+
+.confirmation-control {
+  color: #dbeafe;
+}
+
+.confirmation-control input {
+  width: auto;
+}
+
+.date-result {
+  border-left: 0.25rem solid #7dd3fc;
+  margin-top: 1.5rem;
+  padding-left: 1rem;
+}
+
 .fact-card select {
   background: #0b1220;
   border: 1px solid #64748b;

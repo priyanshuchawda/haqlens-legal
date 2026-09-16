@@ -3,6 +3,7 @@ import { segmentTextDocument } from '@h2s/document';
 import {
   documentBriefFromResponse,
   documentComparisonFromResponse,
+  dateCalculationFromResponse,
   extractionFromResponse,
   factKeys,
   normaliseEvidenceText,
@@ -12,6 +13,7 @@ import {
   type Fact,
   type DocumentBrief,
   type DocumentComparison,
+  type DateCalculationResult,
   type RouteDecision,
 } from './api';
 
@@ -19,6 +21,7 @@ type ExtractionState = 'idle' | 'submitting' | 'safe-mode' | 'rate-limited' | 's
 type RouteState = 'idle' | 'submitting' | 'safe-mode' | 'rate-limited' | 'success';
 type BriefState = 'idle' | 'submitting' | 'safe-mode' | 'success';
 type ComparisonState = 'idle' | 'submitting' | 'safe-mode' | 'success';
+type DateState = 'idle' | 'submitting' | 'safe-mode' | 'success';
 const factLabel = (key: string) => key.replaceAll('_', ' ');
 type EvidenceDraft = Readonly<{ id: string; sourceLabel: string; excerpt: string }>;
 
@@ -36,6 +39,13 @@ export function App() {
   const [briefState, setBriefState] = useState<BriefState>('idle');
   const [comparison, setComparison] = useState<DocumentComparison | null>(null);
   const [comparisonState, setComparisonState] = useState<ComparisonState>('idle');
+  const [dateResult, setDateResult] = useState<DateCalculationResult | null>(null);
+  const [dateState, setDateState] = useState<DateState>('idle');
+  const [dateAnchorEvidenceId, setDateAnchorEvidenceId] = useState('evidence-1');
+  const [dateAnchorValue, setDateAnchorValue] = useState('');
+  const [dateOffsetDays, setDateOffsetDays] = useState('0');
+  const [dateConfirmed, setDateConfirmed] = useState(false);
+  const [dateFormError, setDateFormError] = useState('');
   const [formError, setFormError] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
@@ -43,10 +53,12 @@ export function App() {
   const routeController = useRef<AbortController | null>(null);
   const briefController = useRef<AbortController | null>(null);
   const comparisonController = useRef<AbortController | null>(null);
+  const dateController = useRef<AbortController | null>(null);
   const extractionGeneration = useRef(0);
   const routeGeneration = useRef(0);
   const briefGeneration = useRef(0);
   const comparisonGeneration = useRef(0);
+  const dateGeneration = useRef(0);
   const clearSessionTrigger = useRef<HTMLButtonElement | null>(null);
   const clearAllDataButton = useRef<HTMLButtonElement | null>(null);
   const keepWorkingButton = useRef<HTMLButtonElement | null>(null);
@@ -185,6 +197,7 @@ export function App() {
     setSource(null);
     invalidateBriefResult();
     invalidateComparisonResult();
+    invalidateDateResult();
     invalidateRouteResult();
   }
   function invalidateBriefResult() {
@@ -198,6 +211,13 @@ export function App() {
     comparisonGeneration.current += 1;
     setComparisonState('idle');
     setComparison(null);
+  }
+  function invalidateDateResult() {
+    dateController.current?.abort();
+    dateGeneration.current += 1;
+    setDateState('idle');
+    setDateResult(null);
+    setDateFormError('');
   }
   function invalidateRouteResult() {
     routeController.current?.abort();
@@ -355,6 +375,72 @@ export function App() {
     }
     if (generation !== comparisonGeneration.current) return;
     setComparisonState('safe-mode');
+  }
+  async function submitDateCalculation() {
+    const preparedEvidence = normalisedEvidence();
+    const selectedEvidence = preparedEvidence?.find((item) => item.id === dateAnchorEvidenceId);
+    const offsetDays = Number(dateOffsetDays);
+    if (
+      selectedEvidence === undefined ||
+      selectedEvidence.sourceLabel === null ||
+      selectedEvidence.excerpt === null ||
+      !/^\d{4}-\d{2}-\d{2}$/u.test(dateAnchorValue) ||
+      !Number.isSafeInteger(offsetDays) ||
+      offsetDays < 0 ||
+      offsetDays > 3_650
+    ) {
+      setDateFormError(
+        'Choose a source, enter an ISO date, and use a whole-day offset from 0 to 3650.',
+      );
+      return;
+    }
+    let document;
+    try {
+      document = segmentTextDocument({
+        sourceLabel: selectedEvidence.sourceLabel,
+        text: selectedEvidence.excerpt,
+      });
+    } catch {
+      setDateState('safe-mode');
+      return;
+    }
+    const firstSegment = document.segments[0];
+    if (firstSegment === undefined) {
+      setDateState('safe-mode');
+      return;
+    }
+    const input = {
+      anchor: {
+        confirmed: dateConfirmed,
+        date: dateAnchorValue,
+        citation: { segmentIds: [firstSegment.id] },
+      },
+      offsetDays,
+    };
+    dateController.current?.abort();
+    const generation = ++dateGeneration.current;
+    setDateFormError('');
+    setDateResult(null);
+    setDateState('submitting');
+    const controller = new AbortController();
+    dateController.current = controller;
+    try {
+      const response = await fetch('/v1/dates/calculate', {
+        ...privateJsonRequest(input),
+        signal: controller.signal,
+      });
+      if (generation !== dateGeneration.current) return;
+      const result = dateCalculationFromResponse(await response.json(), input);
+      if (response.ok && result) {
+        setDateResult(result);
+        setDateState('success');
+        return;
+      }
+    } catch {
+      /* Fail closed without rendering transport or provider details. */
+    }
+    if (generation !== dateGeneration.current) return;
+    setDateState('safe-mode');
   }
   return (
     <main className="shell" id="main-content">
@@ -595,7 +681,110 @@ export function App() {
               <button disabled={routeState === 'submitting'} type="button" onClick={submitRoute}>
                 {routeState === 'submitting' ? 'Checking route…' : 'Check preparation path'}
               </button>
+              <fieldset className="date-calculator">
+                <legend>Calculate a confirmed calendar date</legend>
+                <p>
+                  This adds calendar days only. It does not identify a legal deadline or tell you
+                  what action to take.
+                </p>
+                <label>
+                  Date anchor source
+                  <select
+                    aria-label="Date anchor source"
+                    onChange={(event) => {
+                      invalidateDateResult();
+                      setDateAnchorEvidenceId(event.target.value);
+                    }}
+                    value={dateAnchorEvidenceId}
+                  >
+                    {evidence.map((item, index) => (
+                      <option key={item.id} value={item.id}>
+                        {item.sourceLabel || `Evidence ${index + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  ISO anchor date
+                  <input
+                    aria-label="ISO anchor date"
+                    maxLength={10}
+                    onChange={(event) => {
+                      invalidateDateResult();
+                      setDateAnchorValue(event.target.value);
+                    }}
+                    placeholder="2026-02-10"
+                    value={dateAnchorValue}
+                  />
+                </label>
+                <label>
+                  Calendar-day offset
+                  <input
+                    aria-label="Calendar-day offset"
+                    inputMode="numeric"
+                    maxLength={4}
+                    onChange={(event) => {
+                      invalidateDateResult();
+                      setDateOffsetDays(event.target.value);
+                    }}
+                    value={dateOffsetDays}
+                  />
+                </label>
+                <label className="confirmation-control">
+                  <input
+                    checked={dateConfirmed}
+                    onChange={(event) => {
+                      invalidateDateResult();
+                      setDateConfirmed(event.target.checked);
+                    }}
+                    type="checkbox"
+                  />{' '}
+                  I have checked this anchor date against the selected original excerpt.
+                </label>
+                {dateFormError ? (
+                  <p className="form-error" role="alert">
+                    {dateFormError}
+                  </p>
+                ) : null}
+                <button
+                  disabled={dateState === 'submitting'}
+                  type="button"
+                  onClick={submitDateCalculation}
+                >
+                  {dateState === 'submitting'
+                    ? 'Calculating calendar date…'
+                    : 'Calculate calendar date'}
+                </button>
+              </fieldset>
             </div>
+          ) : null}
+          {dateState === 'safe-mode' ? (
+            <div className="safe-mode" role="status">
+              <h3>Date calculation is unavailable</h3>
+              <p>
+                No date was calculated. Keep the source excerpt and seek qualified support if
+                needed.
+              </p>
+            </div>
+          ) : null}
+          {dateState === 'success' && dateResult ? (
+            <section aria-labelledby="date-result-title" className="date-result">
+              <p className="source-status">Source-linked calendar calculation</p>
+              <h3 id="date-result-title">
+                {dateResult.status === 'confirmed'
+                  ? 'Confirmed calendar date'
+                  : 'Confirmation is needed'}
+              </h3>
+              {dateResult.status === 'confirmed' ? (
+                <p>Calculated date: {dateResult.date}.</p>
+              ) : (
+                <p>No date is displayed until you explicitly confirm the source anchor.</p>
+              )}
+              <p>
+                Anchor: {dateResult.anchor.date}; offset: {dateResult.offsetDays} calendar days.
+              </p>
+              <p>This is calendar arithmetic, not a legal deadline or legal advice.</p>
+            </section>
           ) : null}
           {briefState === 'safe-mode' ? (
             <div className="safe-mode" role="status">

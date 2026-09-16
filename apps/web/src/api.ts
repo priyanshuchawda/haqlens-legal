@@ -65,6 +65,17 @@ export type DocumentComparison = Readonly<{
   >;
 }>;
 
+export type DateCalculationResult = Readonly<{
+  anchor: Readonly<{
+    confirmed: boolean;
+    date: string;
+    citation: Readonly<{ segmentIds: readonly string[] }>;
+  }>;
+  date: string | null;
+  offsetDays: number;
+  status: 'confirmed' | 'needs_human_review';
+}>;
+
 export function privateJsonRequest(body: unknown): RequestInit {
   return {
     method: 'POST',
@@ -292,4 +303,56 @@ export function documentComparisonFromResponse(
   if (!response.changes.every((change) => isComparisonChange(change, leftIds, rightIds)))
     return null;
   return response as DocumentComparison;
+}
+
+function isRealIsoDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(year ?? 0, (month ?? 0) - 1, day ?? 0));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === (month ?? 0) - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+/** Accepts only an exact response for the submitted source anchor and requested offset. */
+export function dateCalculationFromResponse(
+  value: unknown,
+  submitted: Readonly<{
+    anchor: Readonly<{
+      confirmed: boolean;
+      date: string;
+      citation: Readonly<{ segmentIds: readonly string[] }>;
+    }>;
+    offsetDays: number;
+  }>,
+): DateCalculationResult | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const result = value as Record<string, unknown>;
+  const anchor = result.anchor;
+  if (typeof anchor !== 'object' || anchor === null) return null;
+  const receivedAnchor = anchor as Record<string, unknown>;
+  const citation = receivedAnchor.citation;
+  if (
+    receivedAnchor.confirmed !== submitted.anchor.confirmed ||
+    receivedAnchor.date !== submitted.anchor.date ||
+    typeof citation !== 'object' ||
+    citation === null ||
+    !Array.isArray((citation as Record<string, unknown>).segmentIds) ||
+    JSON.stringify((citation as Record<string, unknown>).segmentIds) !==
+      JSON.stringify(submitted.anchor.citation.segmentIds) ||
+    result.offsetDays !== submitted.offsetDays
+  )
+    return null;
+  if (submitted.anchor.confirmed && result.status === 'confirmed' && isRealIsoDate(result.date))
+    return result as DateCalculationResult;
+  if (
+    !submitted.anchor.confirmed &&
+    result.status === 'needs_human_review' &&
+    result.date === null
+  ) {
+    return result as DateCalculationResult;
+  }
+  return null;
 }
