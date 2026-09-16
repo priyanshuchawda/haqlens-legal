@@ -449,3 +449,52 @@ describe('cited document brief API boundary', () => {
     expect(await response.json()).toEqual({ error: 'invalid_request' });
   });
 });
+
+describe('document comparison API boundary', () => {
+  const left = {
+    sourceLabel: 'Earlier',
+    text: 'Shared.\n\nOld clause.',
+    segments: [
+      { id: 'segment-1', page: null, sourceStart: 0, sourceEnd: 7, text: 'Shared.' },
+      { id: 'segment-2', page: null, sourceStart: 9, sourceEnd: 20, text: 'Old clause.' },
+    ],
+  };
+  const right = {
+    sourceLabel: 'Revised',
+    text: 'Shared.\n\nNew clause.',
+    segments: [
+      { id: 'segment-1', page: null, sourceStart: 0, sourceEnd: 7, text: 'Shared.' },
+      { id: 'segment-2', page: null, sourceStart: 9, sourceEnd: 20, text: 'New clause.' },
+    ],
+  };
+
+  test('returns deterministic, source-scoped changes without interpretation', async () => {
+    const response = await app.request('/v1/comparisons/document', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ left, right }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      left,
+      right,
+      changes: [{ kind: 'changed', leftSegmentIds: ['segment-2'], rightSegmentIds: ['segment-2'] }],
+    });
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
+  test('rejects a comparison whose source text does not match its declared range', async () => {
+    const response = await app.request('/v1/comparisons/document', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        left: { ...left, segments: [{ ...left.segments[0], text: 'Substituted.' }] },
+        right,
+      }),
+    });
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({ error: 'invalid_request' });
+  });
+});

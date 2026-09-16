@@ -1,5 +1,7 @@
 import {
   caseInputSchema,
+  documentComparisonInputSchema,
+  documentComparisonSchema,
   documentBriefSchema,
   extractionSafeModeSchema,
   extractionSuccessSchema,
@@ -11,6 +13,7 @@ import {
 } from '@h2s/contracts';
 import type { FactExtractor } from '@h2s/ai-gemini';
 import { routeCase } from '@h2s/core';
+import { compareSegmentedDocuments } from '@h2s/document';
 import { Hono, type Context } from 'hono';
 import { createRateLimiter, type RateLimiter } from './rate-limit';
 
@@ -186,6 +189,16 @@ export function createApp({
           },
         ],
       }),
+    );
+  });
+
+  application.post('/v1/comparisons/document', async (context) => {
+    const parsed = await parseBoundedJson(context);
+    if (hasResponse(parsed)) return parsed.response;
+    const input = documentComparisonInputSchema.safeParse(parsed.payload);
+    if (!input.success) return context.json({ error: 'invalid_request' }, 422);
+    return context.json(
+      documentComparisonSchema.parse(compareSegmentedDocuments(input.data.left, input.data.right)),
     );
   });
 

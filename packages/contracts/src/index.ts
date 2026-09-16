@@ -196,6 +196,10 @@ export const documentComparisonSchema = z
     }
   });
 
+export const documentComparisonInputSchema = z
+  .object({ left: segmentedDocumentSchema, right: segmentedDocumentSchema })
+  .strict();
+
 export const caseCategorySchema = z.enum([
   'unpaid_work',
   'termination',
@@ -386,6 +390,7 @@ export type DocumentTextInput = z.infer<typeof documentTextInputSchema>;
 export type Evidence = z.infer<typeof evidenceSchema>;
 export type DocumentBrief = z.infer<typeof documentBriefSchema>;
 export type DocumentComparison = z.infer<typeof documentComparisonSchema>;
+export type DocumentComparisonInput = z.infer<typeof documentComparisonInputSchema>;
 export type SegmentedDocument = z.infer<typeof segmentedDocumentSchema>;
 export type OfficialSource = z.infer<typeof officialSourceSchema>;
 export type OfficialSourceTopic = z.infer<typeof officialSourceTopicSchema>;
