@@ -200,6 +200,56 @@ export const documentComparisonInputSchema = z
   .object({ left: segmentedDocumentSchema, right: segmentedDocumentSchema })
   .strict();
 
+const isoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/u)
+  .superRefine((value, context) => {
+    const [year, month, day] = value.split('-').map(Number);
+    const timestamp = Date.UTC(year ?? 0, (month ?? 0) - 1, day ?? 0);
+    const date = new Date(timestamp);
+    if (
+      date.getUTCFullYear() === year &&
+      date.getUTCMonth() === (month ?? 0) - 1 &&
+      date.getUTCDate() === day
+    )
+      return;
+    context.addIssue({ code: 'custom', message: 'A date must be a real ISO calendar date.' });
+  });
+
+export const dateCalculationInputSchema = z
+  .object({
+    anchor: z
+      .object({
+        confirmed: z.boolean(),
+        date: isoDateSchema,
+        citation: documentCitationSchema,
+      })
+      .strict(),
+    offsetDays: z.number().int().min(0).max(3_650),
+  })
+  .strict();
+
+export const dateCalculationResultSchema = z
+  .object({
+    anchor: dateCalculationInputSchema.shape.anchor,
+    date: isoDateSchema.nullable(),
+    offsetDays: z.number().int().min(0).max(3_650),
+    status: z.enum(['confirmed', 'needs_human_review']),
+  })
+  .strict()
+  .superRefine((result, context) => {
+    const confirmed = result.anchor.confirmed;
+    if (
+      (confirmed && result.status === 'confirmed' && result.date !== null) ||
+      (!confirmed && result.status === 'needs_human_review' && result.date === null)
+    )
+      return;
+    context.addIssue({
+      code: 'custom',
+      message: 'A calculated date requires an explicitly confirmed anchor.',
+    });
+  });
+
 export const caseCategorySchema = z.enum([
   'unpaid_work',
   'termination',
@@ -391,6 +441,8 @@ export type Evidence = z.infer<typeof evidenceSchema>;
 export type DocumentBrief = z.infer<typeof documentBriefSchema>;
 export type DocumentComparison = z.infer<typeof documentComparisonSchema>;
 export type DocumentComparisonInput = z.infer<typeof documentComparisonInputSchema>;
+export type DateCalculationInput = z.infer<typeof dateCalculationInputSchema>;
+export type DateCalculationResult = z.infer<typeof dateCalculationResultSchema>;
 export type SegmentedDocument = z.infer<typeof segmentedDocumentSchema>;
 export type OfficialSource = z.infer<typeof officialSourceSchema>;
 export type OfficialSourceTopic = z.infer<typeof officialSourceTopicSchema>;

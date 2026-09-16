@@ -1,8 +1,11 @@
 import {
   caseCategorySchema,
+  dateCalculationResultSchema,
   routeDecisionSchema,
   type CaseFact,
   type CaseInput,
+  type DateCalculationInput,
+  type DateCalculationResult,
   type FactKey,
   type RouteDecision,
 } from '@h2s/contracts';
@@ -41,6 +44,31 @@ function hasConflictingValues(facts: readonly CaseFact[]): boolean {
 
 function createDecision(decision: RouteDecision): RouteDecision {
   return Object.freeze(routeDecisionSchema.parse(decision));
+}
+
+function formatUtcDate(value: Date): string {
+  return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, '0')}-${String(value.getUTCDate()).padStart(2, '0')}`;
+}
+
+/** Adds an explicitly requested calendar offset only after the source anchor is user-confirmed. */
+export function calculateConfirmedDate(input: DateCalculationInput): DateCalculationResult {
+  if (!input.anchor.confirmed) {
+    return dateCalculationResultSchema.parse({
+      anchor: input.anchor,
+      date: null,
+      offsetDays: input.offsetDays,
+      status: 'needs_human_review',
+    });
+  }
+
+  const [year, month, day] = input.anchor.date.split('-').map(Number);
+  const calculated = new Date(Date.UTC(year ?? 0, (month ?? 0) - 1, (day ?? 0) + input.offsetDays));
+  return dateCalculationResultSchema.parse({
+    anchor: input.anchor,
+    date: formatUtcDate(calculated),
+    offsetDays: input.offsetDays,
+    status: 'confirmed',
+  });
 }
 
 function missingFactKeys(grouped: ReadonlyMap<FactKey, readonly CaseFact[]>): FactKey[] {
