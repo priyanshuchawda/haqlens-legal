@@ -44,14 +44,24 @@ export const segmentedDocumentSchema = z
   })
   .strict()
   .superRefine((document, context) => {
-    if (new Set(document.segments.map((segment) => segment.id)).size === document.segments.length)
-      return;
+    if (new Set(document.segments.map((segment) => segment.id)).size !== document.segments.length) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Document segment IDs must be unique.',
+        path: ['segments'],
+      });
+    }
 
-    context.addIssue({
-      code: 'custom',
-      message: 'Document segment IDs must be unique.',
-      path: ['segments'],
-    });
+    for (const [index, segment] of document.segments.entries()) {
+      const sourceText = document.text.slice(segment.sourceStart, segment.sourceEnd);
+      if (sourceText === segment.text) continue;
+
+      context.addIssue({
+        code: 'custom',
+        message: 'Document segment text must exactly match its source range.',
+        path: ['segments', index, 'text'],
+      });
+    }
   });
 
 export const documentCitationSchema = z

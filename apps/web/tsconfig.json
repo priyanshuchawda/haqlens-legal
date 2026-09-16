@@ -15,5 +15,6 @@
     "noUnusedParameters": true,
     "noEmit": true
   },
+  "references": [{ "path": "../../packages/document" }],
   "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
 }

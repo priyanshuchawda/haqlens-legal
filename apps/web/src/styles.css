@@ -178,6 +178,32 @@ button:disabled {
   color: #a5b4fc;
 }
 
+.document-brief {
+  border-top: 1px solid #475569;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.document-brief ul {
+  padding-left: 1.25rem;
+}
+
+.document-brief blockquote {
+  background: #111c30;
+  border-left: 0.25rem solid #7dd3fc;
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+}
+
+.document-brief blockquote p:first-child {
+  color: #7dd3fc;
+  font-weight: 700;
+}
+
+.document-brief a {
+  color: #bae6fd;
+}
+
 .fact-card {
   border: 1px solid #475569;
   border-radius: 0.5rem;

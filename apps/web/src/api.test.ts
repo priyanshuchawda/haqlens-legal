@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  documentBriefFromResponse,
   extractionFromResponse,
   normaliseEvidenceText,
   privateJsonRequest,
@@ -135,6 +136,50 @@ describe('untrusted browser API parsers', () => {
         ],
         missingFacts: [],
       }),
+    ).toBeNull();
+  });
+
+  test('accepts only a brief that preserves submitted source targets exactly', () => {
+    const document = {
+      sourceLabel: 'Termination email',
+      text: 'Employment ended today.',
+      segments: [
+        {
+          id: 'segment-1',
+          page: null,
+          sourceStart: 0,
+          sourceEnd: 22,
+          text: 'Employment ended today.',
+        },
+      ],
+    } as const;
+    const response = {
+      document,
+      items: [
+        {
+          citation: { segmentIds: ['segment-1'] },
+          kind: 'summary',
+          severity: null,
+          text: 'Review this source excerpt.',
+        },
+      ],
+    };
+
+    expect(documentBriefFromResponse(response, document)?.items).toHaveLength(1);
+    expect(
+      documentBriefFromResponse(
+        { ...response, document: { ...document, text: 'A substituted source.' } },
+        document,
+      ),
+    ).toBeNull();
+    expect(
+      documentBriefFromResponse(
+        {
+          ...response,
+          items: [{ ...response.items[0], citation: { segmentIds: ['segment-2'] } }],
+        },
+        document,
+      ),
     ).toBeNull();
   });
 });

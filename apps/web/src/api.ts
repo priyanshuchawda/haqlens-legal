@@ -27,6 +27,32 @@ export type RouteDecision = Readonly<{
   missingFacts: FactKey[];
 }>;
 
+export type SourceDocument = Readonly<{
+  sourceLabel: string;
+  text: string;
+  segments: ReadonlyArray<
+    Readonly<{
+      id: string;
+      page: number | null;
+      sourceStart: number;
+      sourceEnd: number;
+      text: string;
+    }>
+  >;
+}>;
+
+export type DocumentBrief = Readonly<{
+  document: SourceDocument;
+  items: ReadonlyArray<
+    Readonly<{
+      citation: Readonly<{ segmentIds: string[] }>;
+      kind: 'summary' | 'risk' | 'uncertainty' | 'professional_question';
+      severity: 'low' | 'medium' | 'high' | null;
+      text: string;
+    }>
+  >;
+}>;
+
 export function privateJsonRequest(body: unknown): RequestInit {
   return {
     method: 'POST',
@@ -132,4 +158,76 @@ export function routeFromResponse(value: unknown): RouteDecision | null {
   )
     return null;
   return response as RouteDecision;
+}
+
+function isExactDocument(value: unknown, submitted: SourceDocument): value is SourceDocument {
+  if (typeof value !== 'object' || value === null) return false;
+  const document = value as Record<string, unknown>;
+  if (
+    document.sourceLabel !== submitted.sourceLabel ||
+    document.text !== submitted.text ||
+    !Array.isArray(document.segments) ||
+    document.segments.length !== submitted.segments.length
+  )
+    return false;
+
+  return document.segments.every((segment, index) => {
+    const expected = submitted.segments[index];
+    if (expected === undefined || typeof segment !== 'object' || segment === null) return false;
+    const candidate = segment as Record<string, unknown>;
+    return (
+      candidate.id === expected.id &&
+      candidate.page === expected.page &&
+      candidate.sourceStart === expected.sourceStart &&
+      candidate.sourceEnd === expected.sourceEnd &&
+      candidate.text === expected.text
+    );
+  });
+}
+
+function isBriefItem(value: unknown, segmentIds: ReadonlySet<string>): boolean {
+  if (typeof value !== 'object' || value === null) return false;
+  const item = value as Record<string, unknown>;
+  const citation = item.citation;
+  const kinds = ['summary', 'risk', 'uncertainty', 'professional_question'];
+  const severities = ['low', 'medium', 'high'];
+  if (
+    !kinds.includes(item.kind as string) ||
+    !(item.severity === null || severities.includes(item.severity as string)) ||
+    typeof item.text !== 'string' ||
+    item.text.trim().length !== item.text.length ||
+    item.text.length < 1 ||
+    item.text.length > 1_000 ||
+    typeof citation !== 'object' ||
+    citation === null
+  )
+    return false;
+  const citationIds = (citation as Record<string, unknown>).segmentIds;
+  return (
+    Array.isArray(citationIds) &&
+    citationIds.length >= 1 &&
+    citationIds.length <= 10 &&
+    citationIds.every((id) => typeof id === 'string' && segmentIds.has(id)) &&
+    new Set(citationIds).size === citationIds.length
+  );
+}
+
+/** Accepts only a response that preserves the submitted citation targets exactly. */
+export function documentBriefFromResponse(
+  value: unknown,
+  submittedDocument: SourceDocument,
+): DocumentBrief | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const response = value as Record<string, unknown>;
+  if (!isExactDocument(response.document, submittedDocument) || !Array.isArray(response.items)) {
+    return null;
+  }
+  const segmentIds = new Set(submittedDocument.segments.map((segment) => segment.id));
+  if (
+    response.items.length < 1 ||
+    response.items.length > 50 ||
+    !response.items.every((item) => isBriefItem(item, segmentIds))
+  )
+    return null;
+  return response as DocumentBrief;
 }

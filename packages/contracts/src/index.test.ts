@@ -119,7 +119,7 @@ describe('document citation contracts', () => {
   const segment = {
     id: 'segment-1',
     page: null,
-    sourceEnd: 12,
+    sourceEnd: 15,
     sourceStart: 0,
     text: 'Payment is due.',
   } as const;
@@ -148,6 +148,13 @@ describe('document citation contracts', () => {
         sourceLabel: 'Offer letter',
         text: 'Payment is due.',
         segments: [{ ...segment, sourceEnd: 0 }],
+      }).success,
+    ).toBe(false);
+    expect(
+      segmentedDocumentSchema.safeParse({
+        sourceLabel: 'Offer letter',
+        text: 'Payment is due.',
+        segments: [{ ...segment, text: 'Provider invented this.' }],
       }).success,
     ).toBe(false);
     expect(
