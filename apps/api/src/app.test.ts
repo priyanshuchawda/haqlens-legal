@@ -412,3 +412,40 @@ describe('safe fact extraction API boundary', () => {
     expect(calls).toBe(0);
   });
 });
+
+describe('cited document brief API boundary', () => {
+  const document = {
+    sourceLabel: 'Notice',
+    text: 'Payment is due.',
+    segments: [
+      { id: 'segment-1', page: null, sourceStart: 0, sourceEnd: 15, text: 'Payment is due.' },
+    ],
+  };
+
+  test('returns a bounded fixture brief linked to submitted document evidence', async () => {
+    const response = await app.request('/v1/briefs/document', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(document),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      document,
+      items: [{ citation: { segmentIds: ['segment-1'] }, kind: 'summary' }],
+    });
+    expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
+  test('rejects invalid document citations before creating a brief', async () => {
+    const response = await app.request('/v1/briefs/document', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ...document,
+        segments: [{ ...document.segments[0], id: 'not-a-segment' }],
+      }),
+    });
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({ error: 'invalid_request' });
+  });
+});
