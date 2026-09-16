@@ -3,6 +3,7 @@
   "references": [
     { "path": "./packages/contracts" },
     { "path": "./packages/document" },
+    { "path": "./packages/official-sources" },
     { "path": "./packages/core" },
     { "path": "./packages/ai-gemini" },
     { "path": "./apps/api" },

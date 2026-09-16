@@ -66,6 +66,41 @@ export const documentCitationSchema = z
   })
   .strict();
 
+export const officialSourceTopicSchema = z.enum([
+  'consumer_dispute',
+  'employment_dispute',
+  'legal_aid',
+  'public_grievance',
+]);
+
+export const officialSourceSchema = z
+  .object({
+    authority: z.string().trim().min(1).max(200),
+    id: boundedIdentifierSchema.regex(/^official-[a-z0-9-]+$/u),
+    reviewedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/u),
+    title: z.string().trim().min(1).max(200),
+    topics: z.array(officialSourceTopicSchema).min(1).max(4),
+    url: z.string().url().max(500),
+  })
+  .strict()
+  .superRefine((source, context) => {
+    if (new URL(source.url).protocol !== 'https:') {
+      context.addIssue({
+        code: 'custom',
+        message: 'An official source URL must use HTTPS.',
+        path: ['url'],
+      });
+    }
+
+    if (new Set(source.topics).size === source.topics.length) return;
+
+    context.addIssue({
+      code: 'custom',
+      message: 'An official source must not repeat a topic.',
+      path: ['topics'],
+    });
+  });
+
 export const caseCategorySchema = z.enum([
   'unpaid_work',
   'termination',
@@ -254,6 +289,8 @@ export type CaseInput = z.infer<typeof caseInputSchema>;
 export type DocumentSegment = z.infer<typeof documentSegmentSchema>;
 export type DocumentTextInput = z.infer<typeof documentTextInputSchema>;
 export type Evidence = z.infer<typeof evidenceSchema>;
+export type OfficialSource = z.infer<typeof officialSourceSchema>;
+export type OfficialSourceTopic = z.infer<typeof officialSourceTopicSchema>;
 export type ExtractionResult = z.infer<typeof factExtractionOutputSchema>;
 export type FactKey = z.infer<typeof factKeySchema>;
 export type RouteDecision = z.infer<typeof routeDecisionSchema>;
