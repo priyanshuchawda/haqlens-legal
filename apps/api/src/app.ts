@@ -1,8 +1,10 @@
 import {
   caseInputSchema,
+  documentBriefSchema,
   extractionSafeModeSchema,
   extractionSuccessSchema,
   factExtractionInputSchema,
+  segmentedDocumentSchema,
   routeDecisionSchema,
   type CaseInput,
   type RouteDecision,
@@ -163,6 +165,28 @@ export function createApp({
         503,
       );
     }
+  });
+
+  application.post('/v1/briefs/document', async (context) => {
+    const parsed = await parseBoundedJson(context);
+    if (hasResponse(parsed)) return parsed.response;
+    const document = segmentedDocumentSchema.safeParse(parsed.payload);
+    if (!document.success) return context.json({ error: 'invalid_request' }, 422);
+    const firstSegment = document.data.segments[0];
+    if (firstSegment === undefined) return context.json({ error: 'invalid_request' }, 422);
+    return context.json(
+      documentBriefSchema.parse({
+        document: document.data,
+        items: [
+          {
+            citation: { segmentIds: [firstSegment.id] },
+            kind: 'summary',
+            severity: null,
+            text: 'Review this source excerpt before taking any next step.',
+          },
+        ],
+      }),
+    );
   });
 
   application.notFound((context) => context.json({ error: 'not_found' }, 404));
