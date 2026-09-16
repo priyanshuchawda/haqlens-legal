@@ -101,6 +101,33 @@ export const officialSourceSchema = z
     });
   });
 
+export const briefItemSchema = z
+  .object({
+    citation: documentCitationSchema,
+    kind: z.enum(['summary', 'risk', 'uncertainty', 'professional_question']),
+    severity: z.enum(['low', 'medium', 'high']).nullable(),
+    text: z.string().trim().min(1).max(1_000),
+  })
+  .strict();
+
+export const documentBriefSchema = z
+  .object({
+    document: segmentedDocumentSchema,
+    items: z.array(briefItemSchema).min(1).max(50),
+  })
+  .strict()
+  .superRefine((brief, context) => {
+    const segmentIds = new Set(brief.document.segments.map((segment) => segment.id));
+    for (const [index, item] of brief.items.entries()) {
+      if (item.citation.segmentIds.every((id) => segmentIds.has(id))) continue;
+      context.addIssue({
+        code: 'custom',
+        message: 'Every brief citation must refer to a document segment.',
+        path: ['items', index, 'citation', 'segmentIds'],
+      });
+    }
+  });
+
 export const caseCategorySchema = z.enum([
   'unpaid_work',
   'termination',
@@ -289,6 +316,7 @@ export type CaseInput = z.infer<typeof caseInputSchema>;
 export type DocumentSegment = z.infer<typeof documentSegmentSchema>;
 export type DocumentTextInput = z.infer<typeof documentTextInputSchema>;
 export type Evidence = z.infer<typeof evidenceSchema>;
+export type DocumentBrief = z.infer<typeof documentBriefSchema>;
 export type OfficialSource = z.infer<typeof officialSourceSchema>;
 export type OfficialSourceTopic = z.infer<typeof officialSourceTopicSchema>;
 export type ExtractionResult = z.infer<typeof factExtractionOutputSchema>;
