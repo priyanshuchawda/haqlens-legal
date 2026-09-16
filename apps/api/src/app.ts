@@ -24,6 +24,7 @@ import { Hono, type Context } from 'hono';
 import { createRateLimiter, type RateLimiter } from './rate-limit';
 
 export const MAX_JSON_BYTES = 64 * 1024;
+export const MAX_TRANSCRIPTION_JSON_BYTES = 10 * 1024 * 1024;
 
 const securityHeaders = {
   'cache-control': 'no-store',
@@ -51,7 +52,7 @@ function hasResponse(result: ParsedJson): result is Readonly<{ response: Respons
   return 'response' in result;
 }
 
-async function parseBoundedJson(context: Context): Promise<ParsedJson> {
+async function parseBoundedJson(context: Context, maxBytes = MAX_JSON_BYTES): Promise<ParsedJson> {
   const contentType = context.req.header('content-type')?.toLocaleLowerCase('en-US');
   const mediaType = contentType?.split(';', 1)[0]?.trim();
 
@@ -61,13 +62,13 @@ async function parseBoundedJson(context: Context): Promise<ParsedJson> {
 
   const contentLength = Number(context.req.header('content-length'));
 
-  if (Number.isSafeInteger(contentLength) && contentLength > MAX_JSON_BYTES) {
+  if (Number.isSafeInteger(contentLength) && contentLength > maxBytes) {
     return { response: context.json({ error: 'payload_too_large' }, 413) };
   }
 
   const body = await context.req.raw.text();
 
-  if (new TextEncoder().encode(body).byteLength > MAX_JSON_BYTES) {
+  if (new TextEncoder().encode(body).byteLength > maxBytes) {
     return { response: context.json({ error: 'payload_too_large' }, 413) };
   }
 
