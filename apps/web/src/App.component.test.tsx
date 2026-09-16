@@ -515,4 +515,58 @@ describe('App component', () => {
       fetchSpy.restore();
     }
   });
+
+  test('calculates a date only after the user explicitly confirms its source anchor', async () => {
+    const user = userEvent.setup();
+    let responseNumber = 0;
+    const fetchSpy = spyOnFetch(async () => {
+      responseNumber += 1;
+      return responseNumber === 1
+        ? Response.json({
+            source: 'fixture',
+            safeMode: false,
+            facts: [
+              {
+                key: 'event_date',
+                value: '2026-02-10',
+                certainty: 'confirmed',
+                evidenceIds: ['evidence-1'],
+              },
+            ],
+          })
+        : Response.json({
+            anchor: {
+              confirmed: true,
+              date: '2026-02-10',
+              citation: { segmentIds: ['segment-1'] },
+            },
+            date: '2026-03-12',
+            offsetDays: 30,
+            status: 'confirmed',
+          });
+    });
+
+    try {
+      render(<App />);
+      await user.type(screen.getByLabelText('Source label'), 'Termination email');
+      await user.type(screen.getByLabelText('Evidence excerpt'), 'Employment ended today.');
+      await user.click(screen.getByRole('button', { name: 'Extract facts for review' }));
+      await screen.findByRole('heading', { name: 'Step 2 of 3: confirm facts' });
+      await user.type(screen.getByLabelText('ISO anchor date'), '2026-02-10');
+      await user.clear(screen.getByLabelText('Calendar-day offset'));
+      await user.type(screen.getByLabelText('Calendar-day offset'), '30');
+      await user.click(
+        screen.getByRole('checkbox', {
+          name: 'I have checked this anchor date against the selected original excerpt.',
+        }),
+      );
+      await user.click(screen.getByRole('button', { name: 'Calculate calendar date' }));
+
+      expect(await screen.findByRole('heading', { name: 'Confirmed calendar date' })).toBeDefined();
+      expect(screen.getByText('Calculated date: 2026-03-12.')).toBeDefined();
+      expect(fetchSpy.requests()).toBe(2);
+    } finally {
+      fetchSpy.restore();
+    }
+  });
 });
