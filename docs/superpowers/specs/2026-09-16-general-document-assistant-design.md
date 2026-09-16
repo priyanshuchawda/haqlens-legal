@@ -60,16 +60,16 @@ deterministic routes/dates   reviewed local source manifest     local export tra
 
 ### Boundary ownership
 
-| Module | Owns | Must not own |
-| --- | --- | --- |
-| `contracts` | strict request, evidence, citation, analysis, comparison, and export schemas | provider calls, filesystem access, UI |
-| `document` | file signature recognition, bounded text extraction, segmentation | model calls, legal conclusions |
-| `official-sources` | versioned reviewed source records and URL allow-list | user documents or provider keys |
-| `core` | deterministic conflict, missing-fact, date, and route logic | HTTP, uploads, prompts |
-| `ai-gemini` | bounded structured extraction/explanation and failure mapping | source validation, routing decisions |
-| `redaction` | deterministic local redaction preview and packet construction | remote network access |
-| `api` | request policy, content limits, orchestration, generic error envelopes | duplicate domain logic |
-| `web` | accessible local-state workflow, user approval, source links | secrets, legal decisions, trusted HTML |
+| Module             | Owns                                                                         | Must not own                           |
+| ------------------ | ---------------------------------------------------------------------------- | -------------------------------------- |
+| `contracts`        | strict request, evidence, citation, analysis, comparison, and export schemas | provider calls, filesystem access, UI  |
+| `document`         | file signature recognition, bounded text extraction, segmentation            | model calls, legal conclusions         |
+| `official-sources` | versioned reviewed source records and URL allow-list                         | user documents or provider keys        |
+| `core`             | deterministic conflict, missing-fact, date, and route logic                  | HTTP, uploads, prompts                 |
+| `ai-gemini`        | bounded structured extraction/explanation and failure mapping                | source validation, routing decisions   |
+| `redaction`        | deterministic local redaction preview and packet construction                | remote network access                  |
+| `api`              | request policy, content limits, orchestration, generic error envelopes       | duplicate domain logic                 |
+| `web`              | accessible local-state workflow, user approval, source links                 | secrets, legal decisions, trusted HTML |
 
 ## Data flow and retention
 
@@ -197,16 +197,16 @@ translation parity tests. Risk is expressed with text and structure, never colou
 
 ## Failure behavior
 
-| Situation | Required safe behavior |
-| --- | --- |
-| Malformed/oversized/disallowed file | Reject before extraction; give generic corrective guidance |
-| Scan/OCR uncertainty | Label transcription and ask for user verification |
-| Provider timeout, refusal, malformed output | Rule-Only Safe Mode; no provider diagnostics or fake analysis |
-| Unknown citation or official URL | Drop item/link and show evidence limitation |
-| Contradictory document facts | Preserve both source links and require human review |
-| Ambiguous date | Do not calculate; request confirmation |
-| Immediate danger/self-harm/coercion cue | Exit ordinary flow; show emergency and qualified-support guidance |
-| Unsupported document/topic | Explain boundary and provide a preparation/handoff checklist |
+| Situation                                   | Required safe behavior                                            |
+| ------------------------------------------- | ----------------------------------------------------------------- |
+| Malformed/oversized/disallowed file         | Reject before extraction; give generic corrective guidance        |
+| Scan/OCR uncertainty                        | Label transcription and ask for user verification                 |
+| Provider timeout, refusal, malformed output | Rule-Only Safe Mode; no provider diagnostics or fake analysis     |
+| Unknown citation or official URL            | Drop item/link and show evidence limitation                       |
+| Contradictory document facts                | Preserve both source links and require human review               |
+| Ambiguous date                              | Do not calculate; request confirmation                            |
+| Immediate danger/self-harm/coercion cue     | Exit ordinary flow; show emergency and qualified-support guidance |
+| Unsupported document/topic                  | Explain boundary and provide a preparation/handoff checklist      |
 
 ## Delivery sequence
 

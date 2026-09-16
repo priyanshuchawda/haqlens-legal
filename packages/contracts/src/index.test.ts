@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { caseInputSchema, factExtractionInputSchema, routeDecisionSchema } from './index';
+import {
+  caseInputSchema,
+  documentCitationSchema,
+  documentTextInputSchema,
+  factExtractionInputSchema,
+  segmentedDocumentSchema,
+  routeDecisionSchema,
+} from './index';
 
 const evidence = {
   id: 'document-1',
@@ -102,6 +109,54 @@ describe('route decision contracts', () => {
         actions: [action],
         missingFacts: ['event_date', 'event_date'],
       }).success,
+    ).toBe(false);
+  });
+});
+
+describe('document citation contracts', () => {
+  const segment = {
+    id: 'segment-1',
+    page: null,
+    sourceEnd: 12,
+    sourceStart: 0,
+    text: 'Payment is due.',
+  } as const;
+
+  test('accept bounded source-linked document segments', () => {
+    expect(
+      segmentedDocumentSchema.safeParse({
+        sourceLabel: 'Offer letter',
+        text: 'Payment is due.',
+        segments: [segment],
+      }).success,
+    ).toBe(true);
+    expect(documentCitationSchema.safeParse({ segmentIds: ['segment-1'] }).success).toBe(true);
+  });
+
+  test('reject duplicate, malformed, and impossible source links', () => {
+    expect(
+      segmentedDocumentSchema.safeParse({
+        sourceLabel: 'Offer letter',
+        text: 'Payment is due.',
+        segments: [segment, segment],
+      }).success,
+    ).toBe(false);
+    expect(
+      segmentedDocumentSchema.safeParse({
+        sourceLabel: 'Offer letter',
+        text: 'Payment is due.',
+        segments: [{ ...segment, sourceEnd: 0 }],
+      }).success,
+    ).toBe(false);
+    expect(
+      documentCitationSchema.safeParse({ segmentIds: ['segment-1', 'segment-1'] }).success,
+    ).toBe(false);
+    expect(documentCitationSchema.safeParse({ segmentIds: ['provider-invented'] }).success).toBe(
+      false,
+    );
+    expect(
+      documentTextInputSchema.safeParse({ sourceLabel: 'Offer letter', text: 'x', extra: 1 })
+        .success,
     ).toBe(false);
   });
 });
