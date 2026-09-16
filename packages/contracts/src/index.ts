@@ -13,6 +13,26 @@ export const documentTextInputSchema = z
   })
   .strict();
 
+export const transcriptionPageSchema = z
+  .object({
+    confidence: z.number().min(0).max(1),
+    page: z.number().int().positive(),
+    text: z.string().trim().min(1).max(MAX_DOCUMENT_CHARS),
+  })
+  .strict();
+
+export const transcriptionReviewSchema = z
+  .object({
+    confirmed: z.boolean(),
+    pages: z.array(transcriptionPageSchema).min(1).max(250),
+    sourceLabel: z.string().trim().min(1).max(200),
+  })
+  .strict()
+  .superRefine((review, context) => {
+    if (new Set(review.pages.map((page) => page.page)).size === review.pages.length) return;
+    context.addIssue({ code: 'custom', message: 'A transcription must not repeat a page number.' });
+  });
+
 export const documentSegmentSchema = z
   .object({
     id: boundedIdentifierSchema.regex(/^segment-[1-9]\d*$/u),
@@ -464,6 +484,7 @@ export type CaseFact = z.infer<typeof caseFactSchema>;
 export type CaseInput = z.infer<typeof caseInputSchema>;
 export type DocumentSegment = z.infer<typeof documentSegmentSchema>;
 export type DocumentTextInput = z.infer<typeof documentTextInputSchema>;
+export type TranscriptionReview = z.infer<typeof transcriptionReviewSchema>;
 export type Evidence = z.infer<typeof evidenceSchema>;
 export type DocumentBrief = z.infer<typeof documentBriefSchema>;
 export type DocumentComparison = z.infer<typeof documentComparisonSchema>;
