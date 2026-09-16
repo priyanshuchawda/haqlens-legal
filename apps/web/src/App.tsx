@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { redactDirectIdentifiers, segmentTextDocument } from '@h2s/document';
+import { classifyUpload, redactDirectIdentifiers, segmentTextDocument } from '@h2s/document';
 import {
   documentBriefFromResponse,
   documentComparisonFromResponse,
@@ -53,6 +53,7 @@ export function App() {
   const [questionState, setQuestionState] = useState<QuestionState>('idle');
   const [packetPreview, setPacketPreview] = useState<string | null>(null);
   const [packetError, setPacketError] = useState('');
+  const [fileIntakeStatus, setFileIntakeStatus] = useState('');
   const [dateFormError, setDateFormError] = useState('');
   const [formError, setFormError] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
@@ -251,7 +252,36 @@ export function App() {
     setNextEvidenceId(2);
     setFormError('');
     setRetryAfter(null);
+    setFileIntakeStatus('');
     setConfirmClear(false);
+  }
+  async function intakeLocalFile(file: File | undefined) {
+    if (file === undefined) return;
+    setFileIntakeStatus('Checking file locally…');
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const classified = classifyUpload(file.type, bytes);
+      if (!classified.accepted) {
+        setFileIntakeStatus('This file was not accepted. No file content was added or uploaded.');
+        return;
+      }
+      if (classified.kind !== 'text') {
+        setFileIntakeStatus(
+          'This file format is accepted, but transcription is not available yet. No content was uploaded or used.',
+        );
+        return;
+      }
+      const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      const normalised = normaliseEvidenceText(text);
+      if (normalised === null || !normalised) {
+        setFileIntakeStatus('The text file could not be safely added.');
+        return;
+      }
+      updateEvidence('evidence-1', { excerpt: normalised, sourceLabel: file.name });
+      setFileIntakeStatus('Text file added locally to Evidence 1. It has not been uploaded.');
+    } catch {
+      setFileIntakeStatus('The file could not be safely read. No content was added or uploaded.');
+    }
   }
   async function submitRoute() {
     const preparedEvidence = normalisedEvidence();
@@ -609,6 +639,19 @@ export function App() {
           <p className="supporting-copy">
             Use a short relevant quote. Do not add passwords, bank details, government IDs, or
             anything you would not share with a trusted support person.
+          </p>
+          <label className="field">
+            Add a local document file
+            <input
+              accept="text/plain,application/pdf,image/png,image/jpeg,image/webp"
+              aria-describedby="file-intake-status"
+              onChange={(event) => void intakeLocalFile(event.currentTarget.files?.[0])}
+              type="file"
+            />
+          </label>
+          <p id="file-intake-status">
+            {fileIntakeStatus ||
+              'Text files can be added locally. PDF and image files are checked locally but require a future reviewed transcription step.'}
           </p>
         </div>
         <form
