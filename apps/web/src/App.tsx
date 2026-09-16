@@ -1,5 +1,10 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { classifyUpload, redactDirectIdentifiers, segmentTextDocument } from '@h2s/document';
+import {
+  classifyUpload,
+  confirmedTranscriptionText,
+  redactDirectIdentifiers,
+  segmentTextDocument,
+} from '@h2s/document';
 import {
   documentBriefFromResponse,
   documentComparisonFromResponse,
@@ -58,6 +63,10 @@ export function App() {
   const [fileIntakeStatus, setFileIntakeStatus] = useState('');
   const [sourceTopic, setSourceTopic] = useState('legal_aid');
   const [officialSources, setOfficialSources] = useState<OfficialSource[] | null>(null);
+  const [transcriptionText, setTranscriptionText] = useState('');
+  const [transcriptionConfidence, setTranscriptionConfidence] = useState('0.8');
+  const [transcriptionConfirmed, setTranscriptionConfirmed] = useState(false);
+  const [transcriptionStatus, setTranscriptionStatus] = useState('');
   const [dateFormError, setDateFormError] = useState('');
   const [formError, setFormError] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
@@ -295,6 +304,25 @@ export function App() {
       if (response.ok && sources) setOfficialSources(sources);
     } catch {
       /* Do not expose transport details. */
+    }
+  }
+  function useReviewedTranscription() {
+    try {
+      const text = confirmedTranscriptionText({
+        confirmed: transcriptionConfirmed,
+        sourceLabel: 'Reviewed transcription',
+        pages: [{ page: 1, confidence: Number(transcriptionConfidence), text: transcriptionText }],
+      });
+      if (text === null) {
+        setTranscriptionStatus(
+          'Confirm the transcription against the original scan before using it.',
+        );
+        return;
+      }
+      updateEvidence('evidence-1', { sourceLabel: 'Reviewed transcription', excerpt: text });
+      setTranscriptionStatus('Confirmed transcription added locally to Evidence 1.');
+    } catch {
+      setTranscriptionStatus('The transcription is incomplete or outside the accepted bounds.');
     }
   }
   async function submitRoute() {
@@ -694,6 +722,41 @@ export function App() {
             {fileIntakeStatus ||
               'Text files can be added locally. PDF and image files are checked locally but require a future reviewed transcription step.'}
           </p>
+          <fieldset>
+            <legend>Review a transcription locally</legend>
+            <p>
+              Paste text you have transcribed from a scan. It remains unavailable until you confirm
+              it against the original page.
+            </p>
+            <label>
+              Page 1 transcription
+              <textarea
+                maxLength={60000}
+                onChange={(event) => setTranscriptionText(event.target.value)}
+                value={transcriptionText}
+              />
+            </label>
+            <label>
+              Confidence (0 to 1)
+              <input
+                inputMode="decimal"
+                onChange={(event) => setTranscriptionConfidence(event.target.value)}
+                value={transcriptionConfidence}
+              />
+            </label>
+            <label>
+              <input
+                checked={transcriptionConfirmed}
+                onChange={(event) => setTranscriptionConfirmed(event.target.checked)}
+                type="checkbox"
+              />{' '}
+              I checked this transcription against the original page.
+            </label>
+            <button type="button" onClick={useReviewedTranscription}>
+              Use confirmed transcription
+            </button>
+            {transcriptionStatus ? <p role="status">{transcriptionStatus}</p> : null}
+          </fieldset>
         </div>
         <form
           aria-describedby={formError ? 'form-error' : undefined}
