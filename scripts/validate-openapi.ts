@@ -6,6 +6,7 @@ const expectedPaths = [
   '/v1/comparisons/document',
   '/v1/dates/calculate',
   '/v1/extractions/facts',
+  '/v1/questions/document',
   '/v1/routes/prepare',
 ];
 
@@ -42,6 +43,13 @@ const dateSchema =
     ?.schema?.$ref;
 if (dateSchema !== '#/components/schemas/DateCalculationResult') {
   throw new Error('OpenAPI contract must describe a confirmed-only date calculation response.');
+}
+
+const questionSchema =
+  document.paths['/v1/questions/document']?.post?.responses?.['200']?.content?.['application/json']
+    ?.schema?.$ref;
+if (questionSchema !== '#/components/schemas/GroundedAnswer') {
+  throw new Error('OpenAPI contract must describe a citation-bound grounded answer response.');
 }
 
 console.info('OpenAPI contract validation passed.');

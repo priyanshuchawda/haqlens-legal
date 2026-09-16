@@ -147,6 +147,34 @@
           "429": { "description": "Rate limited; Retry-After is set" }
         }
       }
+    },
+    "/v1/questions/document": {
+      "post": {
+        "description": "Return only a cited, source-exact document excerpt selected by deterministic lexical matching. Instruction-like or unsupported questions return needs_human_review; this endpoint does not provide legal advice, rights, deadlines, or consequences. 64 KiB JSON limit; no-store response.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GroundedQuestionInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cited extractive answer or human-review result",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GroundedAnswer" }
+              }
+            }
+          },
+          "400": { "description": "Invalid JSON" },
+          "413": { "description": "Payload too large" },
+          "415": { "description": "JSON required" },
+          "422": { "description": "Invalid source-exact segmented document or question" },
+          "429": { "description": "Rate limited; Retry-After is set" }
+        }
+      }
     }
   },
   "components": {
@@ -288,6 +316,28 @@
           }
         ],
         "description": "date is null unless the source anchor was explicitly confirmed."
+      },
+      "GroundedQuestionInput": {
+        "type": "object",
+        "required": ["document", "question"],
+        "properties": {
+          "document": { "$ref": "#/components/schemas/SegmentedDocument" },
+          "question": { "type": "string", "minLength": 1, "maxLength": 1000 }
+        },
+        "additionalProperties": false
+      },
+      "GroundedAnswer": {
+        "type": "object",
+        "required": ["answer", "citation", "status"],
+        "properties": {
+          "answer": { "type": ["string", "null"], "minLength": 1, "maxLength": 2000 },
+          "citation": {
+            "oneOf": [{ "$ref": "#/components/schemas/DocumentCitation" }, { "type": "null" }]
+          },
+          "status": { "type": "string", "enum": ["answered", "needs_human_review"] }
+        },
+        "additionalProperties": false,
+        "description": "answered requires a non-null answer and citation; needs_human_review requires both to be null. A returned citation always references the submitted document."
       }
     }
   }

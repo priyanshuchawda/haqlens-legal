@@ -8,13 +8,15 @@ import {
   extractionSafeModeSchema,
   extractionSuccessSchema,
   factExtractionInputSchema,
+  groundedAnswerSchema,
+  groundedQuestionInputSchema,
   segmentedDocumentSchema,
   routeDecisionSchema,
   type CaseInput,
   type RouteDecision,
 } from '@h2s/contracts';
 import type { FactExtractor } from '@h2s/ai-gemini';
-import { calculateConfirmedDate, routeCase } from '@h2s/core';
+import { answerGroundedQuestion, calculateConfirmedDate, routeCase } from '@h2s/core';
 import { compareSegmentedDocuments } from '@h2s/document';
 import { Hono, type Context } from 'hono';
 import { createRateLimiter, type RateLimiter } from './rate-limit';
@@ -210,6 +212,14 @@ export function createApp({
     const input = dateCalculationInputSchema.safeParse(parsed.payload);
     if (!input.success) return context.json({ error: 'invalid_request' }, 422);
     return context.json(dateCalculationResultSchema.parse(calculateConfirmedDate(input.data)));
+  });
+
+  application.post('/v1/questions/document', async (context) => {
+    const parsed = await parseBoundedJson(context);
+    if (hasResponse(parsed)) return parsed.response;
+    const input = groundedQuestionInputSchema.safeParse(parsed.payload);
+    if (!input.success) return context.json({ error: 'invalid_request' }, 422);
+    return context.json(groundedAnswerSchema.parse(answerGroundedQuestion(input.data)));
   });
 
   application.notFound((context) => context.json({ error: 'not_found' }, 404));
