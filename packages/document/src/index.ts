@@ -71,6 +71,33 @@ export function segmentTextDocument(input: DocumentTextInput) {
   });
 }
 
+export type RedactionKind = 'email' | 'phone' | 'government_id' | 'tax_id';
+export type RedactionPreview = Readonly<{
+  counts: Readonly<Record<RedactionKind, number>>;
+  text: string;
+}>;
+
+const redactionPatterns: ReadonlyArray<Readonly<{ kind: RedactionKind; pattern: RegExp }>> = [
+  { kind: 'email', pattern: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,63}\b/giu },
+  { kind: 'phone', pattern: /(?<!\d)(?:\+91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}(?!\d)/gu },
+  { kind: 'government_id', pattern: /(?<!\d)\d{4}[\s-]?\d{4}[\s-]?\d{4}(?!\d)/gu },
+  { kind: 'tax_id', pattern: /\b[A-Z]{5}\d{4}[A-Z]\b/gu },
+];
+
+/** Redacts common direct identifiers locally; callers must still let the user review the result. */
+export function redactDirectIdentifiers(value: string): RedactionPreview {
+  const text = normaliseText(value);
+  const counts: Record<RedactionKind, number> = { email: 0, phone: 0, government_id: 0, tax_id: 0 };
+  let redacted = text;
+  for (const { kind, pattern } of redactionPatterns) {
+    redacted = redacted.replace(pattern, () => {
+      counts[kind] += 1;
+      return `[REDACTED ${kind.replaceAll('_', ' ').toUpperCase()}]`;
+    });
+  }
+  return Object.freeze({ counts: Object.freeze(counts), text: redacted });
+}
+
 function comparisonKey(text: string): string {
   return text.replaceAll(/\s+/gu, ' ').trim().toLocaleLowerCase('en-US');
 }

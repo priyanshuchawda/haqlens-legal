@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { segmentTextDocument } from '@h2s/document';
+import { redactDirectIdentifiers, segmentTextDocument } from '@h2s/document';
 import {
   documentBriefFromResponse,
   documentComparisonFromResponse,
@@ -51,6 +51,8 @@ export function App() {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState<GroundedAnswer | null>(null);
   const [questionState, setQuestionState] = useState<QuestionState>('idle');
+  const [packetPreview, setPacketPreview] = useState<string | null>(null);
+  const [packetError, setPacketError] = useState('');
   const [dateFormError, setDateFormError] = useState('');
   const [formError, setFormError] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
@@ -240,6 +242,8 @@ export function App() {
     setRouteState('idle');
     setRoute(null);
     setRetryAfter(null);
+    setPacketPreview(null);
+    setPacketError('');
   }
   function clearSession() {
     invalidateEvidenceResults();
@@ -503,6 +507,53 @@ export function App() {
     }
     if (generation !== questionGeneration.current) return;
     setQuestionState('safe-mode');
+  }
+  function createPacketPreview() {
+    const preparedEvidence = normalisedEvidence();
+    if (route === null || routeState !== 'success' || preparedEvidence === null) {
+      setPacketError('Complete an evidence-linked preparation path before creating a packet.');
+      return;
+    }
+    const evidenceText = preparedEvidence
+      .map((item, index) => `Evidence ${index + 1}: ${item.sourceLabel}\n${item.excerpt}`)
+      .join('\n\n');
+    try {
+      const redacted = redactDirectIdentifiers(evidenceText);
+      setPacketPreview(
+        [
+          'PREPARATION PACKET — USER-REVIEWED DRAFT',
+          '',
+          `Rule: ${route.ruleId}`,
+          'Preparation steps:',
+          ...route.actions.map((action) => `- ${action.label}`),
+          route.missingFacts.length
+            ? `Missing facts: ${route.missingFacts.map(factLabel).join(', ')}`
+            : '',
+          '',
+          'Redacted evidence preview:',
+          redacted.text,
+          '',
+          'This packet is preparation information, not legal advice. Review every redaction before sharing.',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      );
+      setPacketError('');
+    } catch {
+      setPacketPreview(null);
+      setPacketError('The packet could not be safely prepared from the current evidence.');
+    }
+  }
+  function downloadPacket() {
+    if (packetPreview === null) return;
+    const url = URL.createObjectURL(
+      new Blob([packetPreview], { type: 'text/plain;charset=utf-8' }),
+    );
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'h2s-preparation-packet.txt';
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
   return (
     <main className="shell" id="main-content">
@@ -1089,7 +1140,29 @@ export function App() {
                 <p>Missing facts: {route.missingFacts.map(factLabel).join(', ')}.</p>
               ) : null}
               <p>This is preparation information, not legal advice.</p>
+              <button type="button" onClick={createPacketPreview}>
+                Create redacted action-packet preview
+              </button>
             </div>
+          ) : null}
+          {packetError ? (
+            <p className="form-error" role="alert">
+              {packetError}
+            </p>
+          ) : null}
+          {packetPreview ? (
+            <section aria-labelledby="packet-title" className="document-brief">
+              <p className="source-status">Local-only, user-reviewed export</p>
+              <h3 id="packet-title">Redacted preparation packet preview</h3>
+              <p>
+                Review this preview before downloading. The export is created in this browser and is
+                never uploaded by this action.
+              </p>
+              <pre>{packetPreview}</pre>
+              <button type="button" onClick={downloadPacket}>
+                Download reviewed packet
+              </button>
+            </section>
           ) : null}
         </section>
       </section>

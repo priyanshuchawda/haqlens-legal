@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { MAX_SEGMENT_CHARS } from '@h2s/contracts';
 
-import { compareSegmentedDocuments, segmentTextDocument } from './index';
+import { compareSegmentedDocuments, redactDirectIdentifiers, segmentTextDocument } from './index';
 
 describe('text document segmentation', () => {
   test('normalises line endings and assigns stable, source-exact paragraph citations', () => {
@@ -103,5 +103,22 @@ describe('deterministic document comparison', () => {
     const right = segmentTextDocument({ sourceLabel: 'Revised', text: ' shared   CLAUSE. ' });
 
     expect(compareSegmentedDocuments(left, right).changes).toEqual([]);
+  });
+});
+
+describe('local direct-identifier redaction', () => {
+  test('redacts common identifiers deterministically without network access', () => {
+    expect(
+      redactDirectIdentifiers(
+        'Email a@b.in, call +91 98765 43210, Aadhaar 1234 5678 9012, PAN ABCDE1234F.',
+      ),
+    ).toEqual({
+      counts: { email: 1, government_id: 1, phone: 1, tax_id: 1 },
+      text: 'Email [REDACTED EMAIL], call [REDACTED PHONE], Aadhaar [REDACTED GOVERNMENT ID], PAN [REDACTED TAX ID].',
+    });
+  });
+
+  test('rejects unsafe control characters instead of silently exporting them', () => {
+    expect(() => redactDirectIdentifiers('unsafe\u0000text')).toThrow(RangeError);
   });
 });
