@@ -34,6 +34,22 @@ type DateState = 'idle' | 'submitting' | 'safe-mode' | 'success';
 type QuestionState = 'idle' | 'submitting' | 'safe-mode' | 'success';
 const factLabel = (key: string) => key.replaceAll('_', ' ');
 type EvidenceDraft = Readonly<{ id: string; sourceLabel: string; excerpt: string }>;
+const onboardingCopy = {
+  en: {
+    clear: 'Clear this session',
+    lede: 'Turn a confusing work dispute into a clear, evidence-linked preparation packet.',
+    notice:
+      'This tool provides legal information and preparation support, not legal advice. Your text is held only in this browser while you use this page; document upload is not enabled.',
+    title: 'Employment and Freelancer First Aid',
+  },
+  hi: {
+    clear: 'यह सत्र साफ़ करें',
+    lede: 'काम के जटिल विवाद को साक्ष्य-आधारित तैयारी पैकेट में बदलें।',
+    notice:
+      'यह उपकरण कानूनी जानकारी और तैयारी में सहायता देता है, कानूनी सलाह नहीं। आपका पाठ इस ब्राउज़र में केवल इस सत्र के दौरान रहता है; दस्तावेज़ अपलोड सक्षम नहीं है।',
+    title: 'रोज़गार और फ्रीलांसर प्राथमिक सहायता',
+  },
+} as const;
 
 export function App() {
   const [evidenceDrafts, setEvidenceDrafts] = useState<EvidenceDraft[]>([
@@ -71,6 +87,7 @@ export function App() {
   const [formError, setFormError] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
+  const [language, setLanguage] = useState<'en' | 'hi'>('en');
   const extractionController = useRef<AbortController | null>(null);
   const routeController = useRef<AbortController | null>(null);
   const briefController = useRef<AbortController | null>(null);
@@ -628,19 +645,27 @@ export function App() {
     URL.revokeObjectURL(url);
   }
   return (
-    <main className="shell" id="main-content">
+    <main className="shell" id="main-content" lang={language}>
       <a className="skip-link" href="#evidence-form">
         Skip to evidence form
       </a>
       <section aria-labelledby="page-title" className="hero">
         <p className="eyebrow">Private prototype</p>
-        <h1 id="page-title">Employment and Freelancer First Aid</h1>
-        <p className="lede">
-          Turn a confusing work dispute into a clear, evidence-linked preparation packet.
-        </p>
+        <label>
+          Language
+          <select
+            aria-label="Language"
+            value={language}
+            onChange={(event) => setLanguage(event.target.value as 'en' | 'hi')}
+          >
+            <option value="en">English</option>
+            <option value="hi">हिन्दी</option>
+          </select>
+        </label>
+        <h1 id="page-title">{onboardingCopy[language].title}</h1>
+        <p className="lede">{onboardingCopy[language].lede}</p>
         <p className="notice" role="note">
-          This tool provides legal information and preparation support, not legal advice. Your text
-          is held only in this browser while you use this page; document upload is not enabled.
+          {onboardingCopy[language].notice}
         </p>
         <button
           className="clear-session"
@@ -648,7 +673,7 @@ export function App() {
           type="button"
           onClick={() => setConfirmClear(true)}
         >
-          Clear this session
+          {onboardingCopy[language].clear}
         </button>
         <section aria-labelledby="official-sources-title">
           <h2 id="official-sources-title">Reviewed official support links</h2>
