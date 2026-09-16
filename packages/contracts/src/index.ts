@@ -1,5 +1,71 @@
 import { z } from 'zod';
 
+export const MAX_DOCUMENT_CHARS = 60_000;
+export const MAX_DOCUMENT_SEGMENTS = 250;
+export const MAX_SEGMENT_CHARS = 2_000;
+
+const boundedIdentifierSchema = z.string().min(1).max(128);
+
+export const documentTextInputSchema = z
+  .object({
+    sourceLabel: z.string().trim().min(1).max(200),
+    text: z.string().min(1).max(MAX_DOCUMENT_CHARS),
+  })
+  .strict();
+
+export const documentSegmentSchema = z
+  .object({
+    id: boundedIdentifierSchema.regex(/^segment-[1-9]\d*$/u),
+    page: z.number().int().positive().nullable(),
+    sourceEnd: z.number().int().positive().max(MAX_DOCUMENT_CHARS),
+    sourceStart: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(MAX_DOCUMENT_CHARS - 1),
+    text: z.string().min(1).max(MAX_SEGMENT_CHARS),
+  })
+  .strict()
+  .superRefine((segment, context) => {
+    if (segment.sourceEnd > segment.sourceStart) return;
+
+    context.addIssue({
+      code: 'custom',
+      message: 'A segment source range must have a positive length.',
+      path: ['sourceEnd'],
+    });
+  });
+
+export const segmentedDocumentSchema = z
+  .object({
+    segments: z.array(documentSegmentSchema).min(1).max(MAX_DOCUMENT_SEGMENTS),
+    sourceLabel: z.string().trim().min(1).max(200),
+    text: z.string().min(1).max(MAX_DOCUMENT_CHARS),
+  })
+  .strict()
+  .superRefine((document, context) => {
+    if (new Set(document.segments.map((segment) => segment.id)).size === document.segments.length)
+      return;
+
+    context.addIssue({
+      code: 'custom',
+      message: 'Document segment IDs must be unique.',
+      path: ['segments'],
+    });
+  });
+
+export const documentCitationSchema = z
+  .object({
+    segmentIds: z
+      .array(boundedIdentifierSchema.regex(/^segment-[1-9]\d*$/u))
+      .min(1)
+      .max(10)
+      .refine((ids) => new Set(ids).size === ids.length, {
+        message: 'A citation must not repeat a segment ID.',
+      }),
+  })
+  .strict();
+
 export const caseCategorySchema = z.enum([
   'unpaid_work',
   'termination',
@@ -185,6 +251,8 @@ export const routeDecisionSchema = z
 
 export type CaseFact = z.infer<typeof caseFactSchema>;
 export type CaseInput = z.infer<typeof caseInputSchema>;
+export type DocumentSegment = z.infer<typeof documentSegmentSchema>;
+export type DocumentTextInput = z.infer<typeof documentTextInputSchema>;
 export type Evidence = z.infer<typeof evidenceSchema>;
 export type ExtractionResult = z.infer<typeof factExtractionOutputSchema>;
 export type FactKey = z.infer<typeof factKeySchema>;
