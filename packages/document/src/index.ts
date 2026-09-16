@@ -77,6 +77,65 @@ export type RedactionPreview = Readonly<{
   text: string;
 }>;
 
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export type AcceptedFileKind = 'pdf' | 'png' | 'jpeg' | 'webp' | 'text';
+export type FileIntakeResult = Readonly<
+  | { accepted: true; kind: AcceptedFileKind }
+  | {
+      accepted: false;
+      reason: 'declared_type_mismatch' | 'invalid_signature' | 'payload_too_large';
+    }
+>;
+
+function startsWith(bytes: Uint8Array, expected: readonly number[]): boolean {
+  return expected.every((value, index) => bytes[index] === value);
+}
+
+/** Classifies only a small allow-list by both declared MIME type and magic bytes. */
+export function classifyUpload(declaredType: string, bytes: Uint8Array): FileIntakeResult {
+  if (bytes.byteLength > MAX_UPLOAD_BYTES) return { accepted: false, reason: 'payload_too_large' };
+  const type = declaredType.trim().toLocaleLowerCase('en-US');
+  const signatures: ReadonlyArray<
+    Readonly<{ kind: AcceptedFileKind; type: string; valid: boolean }>
+  > = [
+    {
+      kind: 'pdf',
+      type: 'application/pdf',
+      valid: startsWith(bytes, [0x25, 0x50, 0x44, 0x46, 0x2d]),
+    },
+    {
+      kind: 'png',
+      type: 'image/png',
+      valid: startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    },
+    { kind: 'jpeg', type: 'image/jpeg', valid: startsWith(bytes, [0xff, 0xd8, 0xff]) },
+    {
+      kind: 'webp',
+      type: 'image/webp',
+      valid:
+        startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) &&
+        bytes[8] === 0x57 &&
+        bytes[9] === 0x45 &&
+        bytes[10] === 0x42 &&
+        bytes[11] === 0x50,
+    },
+  ];
+  const signature = signatures.find((item) => item.type === type);
+  if (signature !== undefined) {
+    return signature.valid
+      ? { accepted: true, kind: signature.kind }
+      : { accepted: false, reason: 'invalid_signature' };
+  }
+  if (type !== 'text/plain') return { accepted: false, reason: 'declared_type_mismatch' };
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  try {
+    normaliseText(decoder.decode(bytes));
+    return { accepted: true, kind: 'text' };
+  } catch {
+    return { accepted: false, reason: 'invalid_signature' };
+  }
+}
+
 const redactionPatterns: ReadonlyArray<Readonly<{ kind: RedactionKind; pattern: RegExp }>> = [
   { kind: 'email', pattern: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,63}\b/giu },
   { kind: 'phone', pattern: /(?<!\d)(?:\+91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}(?!\d)/gu },

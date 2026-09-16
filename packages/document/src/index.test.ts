@@ -2,7 +2,13 @@ import { describe, expect, test } from 'bun:test';
 
 import { MAX_SEGMENT_CHARS } from '@h2s/contracts';
 
-import { compareSegmentedDocuments, redactDirectIdentifiers, segmentTextDocument } from './index';
+import {
+  classifyUpload,
+  compareSegmentedDocuments,
+  MAX_UPLOAD_BYTES,
+  redactDirectIdentifiers,
+  segmentTextDocument,
+} from './index';
 
 describe('text document segmentation', () => {
   test('normalises line endings and assigns stable, source-exact paragraph citations', () => {
@@ -120,5 +126,39 @@ describe('local direct-identifier redaction', () => {
 
   test('rejects unsafe control characters instead of silently exporting them', () => {
     expect(() => redactDirectIdentifiers('unsafe\u0000text')).toThrow(RangeError);
+  });
+});
+
+describe('secure file-intake classification', () => {
+  test('accepts only declared allow-list types with matching magic bytes', () => {
+    expect(
+      classifyUpload('application/pdf', new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d])),
+    ).toEqual({ accepted: true, kind: 'pdf' });
+    expect(
+      classifyUpload('image/png', new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+    ).toEqual({ accepted: true, kind: 'png' });
+    expect(classifyUpload('text/plain', new TextEncoder().encode('Plain evidence.'))).toEqual({
+      accepted: true,
+      kind: 'text',
+    });
+  });
+
+  test('rejects spoofed, unsupported, malformed, and oversized files before extraction', () => {
+    expect(classifyUpload('application/pdf', new TextEncoder().encode('not a PDF'))).toEqual({
+      accepted: false,
+      reason: 'invalid_signature',
+    });
+    expect(classifyUpload('application/zip', new Uint8Array([0x50, 0x4b, 3, 4]))).toEqual({
+      accepted: false,
+      reason: 'declared_type_mismatch',
+    });
+    expect(classifyUpload('text/plain', new Uint8Array([0xff]))).toEqual({
+      accepted: false,
+      reason: 'invalid_signature',
+    });
+    expect(classifyUpload('image/jpeg', new Uint8Array(MAX_UPLOAD_BYTES + 1))).toEqual({
+      accepted: false,
+      reason: 'payload_too_large',
+    });
   });
 });
