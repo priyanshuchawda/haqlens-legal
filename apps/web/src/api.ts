@@ -76,6 +76,12 @@ export type DateCalculationResult = Readonly<{
   status: 'confirmed' | 'needs_human_review';
 }>;
 
+export type GroundedAnswer = Readonly<{
+  answer: string | null;
+  citation: Readonly<{ segmentIds: string[] }> | null;
+  status: 'answered' | 'needs_human_review';
+}>;
+
 export function privateJsonRequest(body: unknown): RequestInit {
   return {
     method: 'POST',
@@ -355,4 +361,38 @@ export function dateCalculationFromResponse(
     return result as DateCalculationResult;
   }
   return null;
+}
+
+/** Accepts an answer only when it is cited exclusively to the submitted document. */
+export function groundedAnswerFromResponse(
+  value: unknown,
+  submittedDocument: SourceDocument,
+): GroundedAnswer | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const response = value as Record<string, unknown>;
+  if (
+    response.status === 'needs_human_review' &&
+    response.answer === null &&
+    response.citation === null
+  ) {
+    return { answer: null, citation: null, status: 'needs_human_review' };
+  }
+  if (
+    response.status !== 'answered' ||
+    typeof response.answer !== 'string' ||
+    response.answer.trim().length !== response.answer.length ||
+    response.answer.length < 1 ||
+    response.answer.length > 2_000 ||
+    typeof response.citation !== 'object' ||
+    response.citation === null
+  )
+    return null;
+  const segmentIds = (response.citation as Record<string, unknown>).segmentIds;
+  const permittedIds = new Set(submittedDocument.segments.map((segment) => segment.id));
+  if (!isComparisonSegmentIds(segmentIds, permittedIds)) return null;
+  return {
+    answer: response.answer,
+    citation: { segmentIds },
+    status: 'answered',
+  };
 }

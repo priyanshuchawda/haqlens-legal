@@ -6,11 +6,13 @@ import {
   dateCalculationFromResponse,
   extractionFromResponse,
   factKeys,
+  groundedAnswerFromResponse,
   normaliseEvidenceText,
   privateJsonRequest,
   retryAfterSeconds,
   routeFromResponse,
   type Fact,
+  type GroundedAnswer,
   type DocumentBrief,
   type DocumentComparison,
   type DateCalculationResult,
@@ -22,6 +24,7 @@ type RouteState = 'idle' | 'submitting' | 'safe-mode' | 'rate-limited' | 'succes
 type BriefState = 'idle' | 'submitting' | 'safe-mode' | 'success';
 type ComparisonState = 'idle' | 'submitting' | 'safe-mode' | 'success';
 type DateState = 'idle' | 'submitting' | 'safe-mode' | 'success';
+type QuestionState = 'idle' | 'submitting' | 'safe-mode' | 'success';
 const factLabel = (key: string) => key.replaceAll('_', ' ');
 type EvidenceDraft = Readonly<{ id: string; sourceLabel: string; excerpt: string }>;
 
@@ -45,6 +48,9 @@ export function App() {
   const [dateAnchorValue, setDateAnchorValue] = useState('');
   const [dateOffsetDays, setDateOffsetDays] = useState('0');
   const [dateConfirmed, setDateConfirmed] = useState(false);
+  const [question, setQuestion] = useState('');
+  const [answer, setAnswer] = useState<GroundedAnswer | null>(null);
+  const [questionState, setQuestionState] = useState<QuestionState>('idle');
   const [dateFormError, setDateFormError] = useState('');
   const [formError, setFormError] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
@@ -54,11 +60,13 @@ export function App() {
   const briefController = useRef<AbortController | null>(null);
   const comparisonController = useRef<AbortController | null>(null);
   const dateController = useRef<AbortController | null>(null);
+  const questionController = useRef<AbortController | null>(null);
   const extractionGeneration = useRef(0);
   const routeGeneration = useRef(0);
   const briefGeneration = useRef(0);
   const comparisonGeneration = useRef(0);
   const dateGeneration = useRef(0);
+  const questionGeneration = useRef(0);
   const clearSessionTrigger = useRef<HTMLButtonElement | null>(null);
   const clearAllDataButton = useRef<HTMLButtonElement | null>(null);
   const keepWorkingButton = useRef<HTMLButtonElement | null>(null);
@@ -198,6 +206,7 @@ export function App() {
     invalidateBriefResult();
     invalidateComparisonResult();
     invalidateDateResult();
+    invalidateQuestionResult();
     invalidateRouteResult();
   }
   function invalidateBriefResult() {
@@ -218,6 +227,12 @@ export function App() {
     setDateState('idle');
     setDateResult(null);
     setDateFormError('');
+  }
+  function invalidateQuestionResult() {
+    questionController.current?.abort();
+    questionGeneration.current += 1;
+    setQuestionState('idle');
+    setAnswer(null);
   }
   function invalidateRouteResult() {
     routeController.current?.abort();
@@ -441,6 +456,53 @@ export function App() {
     }
     if (generation !== dateGeneration.current) return;
     setDateState('safe-mode');
+  }
+  async function submitQuestion() {
+    const preparedEvidence = normalisedEvidence();
+    const firstEvidence = preparedEvidence?.[0];
+    if (
+      firstEvidence === undefined ||
+      firstEvidence.sourceLabel === null ||
+      firstEvidence.excerpt === null ||
+      !question.trim() ||
+      question.trim().length > 1_000
+    ) {
+      setQuestionState('safe-mode');
+      return;
+    }
+    let document;
+    try {
+      document = segmentTextDocument({
+        sourceLabel: firstEvidence.sourceLabel,
+        text: firstEvidence.excerpt,
+      });
+    } catch {
+      setQuestionState('safe-mode');
+      return;
+    }
+    questionController.current?.abort();
+    const generation = ++questionGeneration.current;
+    setAnswer(null);
+    setQuestionState('submitting');
+    const controller = new AbortController();
+    questionController.current = controller;
+    try {
+      const response = await fetch('/v1/questions/document', {
+        ...privateJsonRequest({ document, question: question.trim() }),
+        signal: controller.signal,
+      });
+      if (generation !== questionGeneration.current) return;
+      const result = groundedAnswerFromResponse(await response.json(), document);
+      if (response.ok && result) {
+        setAnswer(result);
+        setQuestionState('success');
+        return;
+      }
+    } catch {
+      /* Fail closed without rendering transport details. */
+    }
+    if (generation !== questionGeneration.current) return;
+    setQuestionState('safe-mode');
   }
   return (
     <main className="shell" id="main-content">
@@ -756,7 +818,68 @@ export function App() {
                     : 'Calculate calendar date'}
                 </button>
               </fieldset>
+              <fieldset className="date-calculator">
+                <legend>Ask about the first evidence excerpt</legend>
+                <p>
+                  Answers quote only a cited excerpt. They do not interpret rights, deadlines, or
+                  legal consequences.
+                </p>
+                <label>
+                  Document question
+                  <input
+                    aria-label="Document question"
+                    maxLength={1000}
+                    onChange={(event) => {
+                      invalidateQuestionResult();
+                      setQuestion(event.target.value);
+                    }}
+                    value={question}
+                  />
+                </label>
+                <button
+                  disabled={questionState === 'submitting'}
+                  type="button"
+                  onClick={submitQuestion}
+                >
+                  {questionState === 'submitting' ? 'Finding cited excerpt…' : 'Find cited excerpt'}
+                </button>
+              </fieldset>
             </div>
+          ) : null}
+          {questionState === 'safe-mode' ? (
+            <div className="safe-mode" role="status">
+              <h3>Document answer is unavailable</h3>
+              <p>
+                No answer was shown. Keep the original excerpt and seek qualified support if needed.
+              </p>
+            </div>
+          ) : null}
+          {questionState === 'success' && answer ? (
+            <section aria-labelledby="question-result-title" className="document-brief">
+              <p className="source-status">Cited document excerpt</p>
+              <h3 id="question-result-title">
+                {answer.status === 'answered' ? 'Source-linked answer' : 'Human review is needed'}
+              </h3>
+              {answer.status === 'answered' && answer.citation ? (
+                <>
+                  <p>{answer.answer}</p>
+                  <p>
+                    Source:{' '}
+                    {answer.citation.segmentIds.map((segmentId, index) => (
+                      <span key={segmentId}>
+                        {index > 0 ? ', ' : null}first evidence excerpt, segment{' '}
+                        {segmentId.replace('segment-', '')}
+                      </span>
+                    ))}
+                  </p>
+                </>
+              ) : (
+                <p>
+                  The document did not provide a safe source-exact answer. Review the original
+                  excerpt.
+                </p>
+              )}
+            </section>
           ) : null}
           {dateState === 'safe-mode' ? (
             <div className="safe-mode" role="status">
