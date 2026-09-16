@@ -81,6 +81,12 @@ export type GroundedAnswer = Readonly<{
   citation: Readonly<{ segmentIds: string[] }> | null;
   status: 'answered' | 'needs_human_review';
 }>;
+export type OfficialSource = Readonly<{
+  authority: string;
+  reviewedOn: string;
+  title: string;
+  url: string;
+}>;
 
 export function privateJsonRequest(body: unknown): RequestInit {
   return {
@@ -395,4 +401,36 @@ export function groundedAnswerFromResponse(
     citation: { segmentIds },
     status: 'answered',
   };
+}
+
+/** Accepts only bounded HTTPS official-source records from a selected generic topic. */
+export function officialSourcesFromResponse(value: unknown): OfficialSource[] | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const sources = (value as Record<string, unknown>).sources;
+  if (!Array.isArray(sources) || sources.length > 10) return null;
+  const parsed: OfficialSource[] = [];
+  for (const source of sources) {
+    if (typeof source !== 'object' || source === null) return null;
+    const item = source as Record<string, unknown>;
+    if (
+      typeof item.authority !== 'string' ||
+      typeof item.reviewedOn !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}$/u.test(item.reviewedOn) ||
+      typeof item.title !== 'string' ||
+      typeof item.url !== 'string'
+    )
+      return null;
+    try {
+      if (new URL(item.url).protocol !== 'https:') return null;
+    } catch {
+      return null;
+    }
+    parsed.push({
+      authority: item.authority,
+      reviewedOn: item.reviewedOn,
+      title: item.title,
+      url: item.url,
+    });
+  }
+  return parsed;
 }
