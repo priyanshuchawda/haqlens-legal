@@ -138,6 +138,64 @@ export const documentBriefSchema = z
     }
   });
 
+const comparisonSegmentIdsSchema = z
+  .array(boundedIdentifierSchema.regex(/^segment-[1-9]\d*$/u))
+  .min(1)
+  .max(10)
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: 'A comparison source list must not repeat a segment ID.',
+  });
+
+export const documentComparisonChangeSchema = z
+  .object({
+    kind: z.enum(['added', 'removed', 'changed']),
+    leftSegmentIds: comparisonSegmentIdsSchema.nullable(),
+    rightSegmentIds: comparisonSegmentIdsSchema.nullable(),
+  })
+  .strict()
+  .superRefine((change, context) => {
+    const hasLeft = change.leftSegmentIds !== null;
+    const hasRight = change.rightSegmentIds !== null;
+    const expected =
+      (change.kind === 'added' && !hasLeft && hasRight) ||
+      (change.kind === 'removed' && hasLeft && !hasRight) ||
+      (change.kind === 'changed' && hasLeft && hasRight);
+    if (expected) return;
+
+    context.addIssue({
+      code: 'custom',
+      message: 'Comparison change sources must match the declared change kind.',
+    });
+  });
+
+export const documentComparisonSchema = z
+  .object({
+    changes: z.array(documentComparisonChangeSchema).max(MAX_DOCUMENT_SEGMENTS * 2),
+    left: segmentedDocumentSchema,
+    right: segmentedDocumentSchema,
+  })
+  .strict()
+  .superRefine((comparison, context) => {
+    const leftSegmentIds = new Set(comparison.left.segments.map((segment) => segment.id));
+    const rightSegmentIds = new Set(comparison.right.segments.map((segment) => segment.id));
+    for (const [index, change] of comparison.changes.entries()) {
+      if (change.leftSegmentIds?.every((id) => leftSegmentIds.has(id)) === false) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Every left comparison source must refer to the left document.',
+          path: ['changes', index, 'leftSegmentIds'],
+        });
+      }
+      if (change.rightSegmentIds?.every((id) => rightSegmentIds.has(id)) === false) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Every right comparison source must refer to the right document.',
+          path: ['changes', index, 'rightSegmentIds'],
+        });
+      }
+    }
+  });
+
 export const caseCategorySchema = z.enum([
   'unpaid_work',
   'termination',
@@ -327,6 +385,8 @@ export type DocumentSegment = z.infer<typeof documentSegmentSchema>;
 export type DocumentTextInput = z.infer<typeof documentTextInputSchema>;
 export type Evidence = z.infer<typeof evidenceSchema>;
 export type DocumentBrief = z.infer<typeof documentBriefSchema>;
+export type DocumentComparison = z.infer<typeof documentComparisonSchema>;
+export type SegmentedDocument = z.infer<typeof segmentedDocumentSchema>;
 export type OfficialSource = z.infer<typeof officialSourceSchema>;
 export type OfficialSourceTopic = z.infer<typeof officialSourceTopicSchema>;
 export type ExtractionResult = z.infer<typeof factExtractionOutputSchema>;
