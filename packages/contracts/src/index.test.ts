@@ -4,6 +4,7 @@ import {
   documentCitationSchema,
   documentTextInputSchema,
   factExtractionInputSchema,
+  officialSourceSchema,
   segmentedDocumentSchema,
   routeDecisionSchema,
 } from './index';
@@ -157,6 +158,30 @@ describe('document citation contracts', () => {
     expect(
       documentTextInputSchema.safeParse({ sourceLabel: 'Offer letter', text: 'x', extra: 1 })
         .success,
+    ).toBe(false);
+  });
+});
+
+describe('official-source contracts', () => {
+  const source = {
+    authority: 'National Legal Services Authority',
+    id: 'official-nalsa-legal-aid',
+    reviewedOn: '2026-09-17',
+    title: 'Legal Aid',
+    topics: ['legal_aid'],
+    url: 'https://nalsa.gov.in/legal-aid/',
+  } as const;
+
+  test('accepts bounded reviewed official-source provenance', () => {
+    expect(officialSourceSchema.safeParse(source).success).toBe(true);
+  });
+
+  test('rejects duplicate topics and non-HTTPS source URLs', () => {
+    expect(
+      officialSourceSchema.safeParse({ ...source, topics: ['legal_aid', 'legal_aid'] }).success,
+    ).toBe(false);
+    expect(
+      officialSourceSchema.safeParse({ ...source, url: 'http://nalsa.gov.in/legal-aid/' }).success,
     ).toBe(false);
   });
 });
