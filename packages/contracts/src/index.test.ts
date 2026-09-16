@@ -4,6 +4,8 @@ import {
   documentCitationSchema,
   documentBriefSchema,
   documentComparisonSchema,
+  dateCalculationInputSchema,
+  dateCalculationResultSchema,
   documentTextInputSchema,
   factExtractionInputSchema,
   officialSourceSchema,
@@ -285,6 +287,44 @@ describe('document comparison contracts', () => {
         left,
         right,
         changes: [{ kind: 'removed', leftSegmentIds: ['segment-2'], rightSegmentIds: null }],
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('confirmed date contracts', () => {
+  const anchor = {
+    confirmed: true,
+    date: '2026-02-10',
+    citation: { segmentIds: ['segment-1'] },
+  };
+
+  test('accepts a real ISO anchor and a confirmed calculated date', () => {
+    expect(dateCalculationInputSchema.safeParse({ anchor, offsetDays: 30 }).success).toBe(true);
+    expect(
+      dateCalculationResultSchema.safeParse({
+        anchor,
+        date: '2026-03-12',
+        offsetDays: 30,
+        status: 'confirmed',
+      }).success,
+    ).toBe(true);
+  });
+
+  test('rejects impossible dates and any calculation without confirmation', () => {
+    expect(
+      dateCalculationInputSchema.safeParse({
+        ...anchor,
+        anchor: { ...anchor, date: '2026-02-30' },
+        offsetDays: 1,
+      }).success,
+    ).toBe(false);
+    expect(
+      dateCalculationResultSchema.safeParse({
+        anchor: { ...anchor, confirmed: false },
+        date: '2026-03-12',
+        offsetDays: 30,
+        status: 'confirmed',
       }).success,
     ).toBe(false);
   });
