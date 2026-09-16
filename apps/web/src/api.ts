@@ -53,6 +53,18 @@ export type DocumentBrief = Readonly<{
   >;
 }>;
 
+export type DocumentComparison = Readonly<{
+  left: SourceDocument;
+  right: SourceDocument;
+  changes: ReadonlyArray<
+    Readonly<{
+      kind: 'added' | 'removed' | 'changed';
+      leftSegmentIds: string[] | null;
+      rightSegmentIds: string[] | null;
+    }>
+  >;
+}>;
+
 export function privateJsonRequest(body: unknown): RequestInit {
   return {
     method: 'POST',
@@ -230,4 +242,54 @@ export function documentBriefFromResponse(
   )
     return null;
   return response as DocumentBrief;
+}
+
+function isComparisonSegmentIds(value: unknown, validIds: ReadonlySet<string>): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.length >= 1 &&
+    value.length <= 10 &&
+    value.every((id) => typeof id === 'string' && validIds.has(id)) &&
+    new Set(value).size === value.length
+  );
+}
+
+function isComparisonChange(
+  value: unknown,
+  leftIds: ReadonlySet<string>,
+  rightIds: ReadonlySet<string>,
+): boolean {
+  if (typeof value !== 'object' || value === null) return false;
+  const change = value as Record<string, unknown>;
+  const left = change.leftSegmentIds;
+  const right = change.rightSegmentIds;
+  if (change.kind === 'added') return left === null && isComparisonSegmentIds(right, rightIds);
+  if (change.kind === 'removed') return isComparisonSegmentIds(left, leftIds) && right === null;
+  return (
+    change.kind === 'changed' &&
+    isComparisonSegmentIds(left, leftIds) &&
+    isComparisonSegmentIds(right, rightIds)
+  );
+}
+
+/** Accepts only a deterministic comparison that preserves both submitted documents exactly. */
+export function documentComparisonFromResponse(
+  value: unknown,
+  submittedLeft: SourceDocument,
+  submittedRight: SourceDocument,
+): DocumentComparison | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const response = value as Record<string, unknown>;
+  if (
+    !isExactDocument(response.left, submittedLeft) ||
+    !isExactDocument(response.right, submittedRight) ||
+    !Array.isArray(response.changes) ||
+    response.changes.length > 500
+  )
+    return null;
+  const leftIds = new Set(submittedLeft.segments.map((segment) => segment.id));
+  const rightIds = new Set(submittedRight.segments.map((segment) => segment.id));
+  if (!response.changes.every((change) => isComparisonChange(change, leftIds, rightIds)))
+    return null;
+  return response as DocumentComparison;
 }

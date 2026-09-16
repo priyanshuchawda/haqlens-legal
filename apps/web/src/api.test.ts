@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   documentBriefFromResponse,
+  documentComparisonFromResponse,
   extractionFromResponse,
   normaliseEvidenceText,
   privateJsonRequest,
@@ -179,6 +180,47 @@ describe('untrusted browser API parsers', () => {
           items: [{ ...response.items[0], citation: { segmentIds: ['segment-2'] } }],
         },
         document,
+      ),
+    ).toBeNull();
+  });
+
+  test('accepts only a comparison that preserves both source documents and sides', () => {
+    const left = {
+      sourceLabel: 'Earlier',
+      text: 'Old clause.',
+      segments: [
+        { id: 'segment-1', page: null, sourceStart: 0, sourceEnd: 11, text: 'Old clause.' },
+      ],
+    } as const;
+    const right = {
+      sourceLabel: 'Revised',
+      text: 'New clause.',
+      segments: [
+        { id: 'segment-1', page: null, sourceStart: 0, sourceEnd: 11, text: 'New clause.' },
+      ],
+    } as const;
+    const response = {
+      left,
+      right,
+      changes: [{ kind: 'changed', leftSegmentIds: ['segment-1'], rightSegmentIds: ['segment-1'] }],
+    };
+
+    expect(documentComparisonFromResponse(response, left, right)?.changes).toHaveLength(1);
+    expect(
+      documentComparisonFromResponse(
+        { ...response, left: { ...left, text: 'Substituted.' } },
+        left,
+        right,
+      ),
+    ).toBeNull();
+    expect(
+      documentComparisonFromResponse(
+        {
+          ...response,
+          changes: [{ kind: 'added', leftSegmentIds: ['segment-1'], rightSegmentIds: null }],
+        },
+        left,
+        right,
       ),
     ).toBeNull();
   });
