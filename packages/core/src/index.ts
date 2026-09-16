@@ -1,12 +1,15 @@
 import {
   caseCategorySchema,
   dateCalculationResultSchema,
+  groundedAnswerSchema,
   routeDecisionSchema,
   type CaseFact,
   type CaseInput,
   type DateCalculationInput,
   type DateCalculationResult,
   type FactKey,
+  type GroundedAnswer,
+  type GroundedQuestionInput,
   type RouteDecision,
 } from '@h2s/contracts';
 
@@ -80,6 +83,74 @@ export function requiresGroundedQuestionReview(question: string): boolean {
     /act as (a |an )?(system|developer|assistant)/u,
     /follow (these|my) instructions/u,
   ].some((pattern) => pattern.test(normalised));
+}
+
+const questionStopWords = new Set([
+  'a',
+  'an',
+  'and',
+  'are',
+  'does',
+  'for',
+  'from',
+  'how',
+  'in',
+  'is',
+  'it',
+  'of',
+  'the',
+  'this',
+  'to',
+  'what',
+  'when',
+  'where',
+  'which',
+]);
+
+function tokenSet(value: string): ReadonlySet<string> {
+  return new Set(
+    (
+      value
+        .normalize('NFKC')
+        .toLocaleLowerCase('en-US')
+        .match(/[\p{L}\p{N}]+/gu) ?? []
+    ).filter((token) => token.length > 1 && !questionStopWords.has(token)),
+  );
+}
+
+/**
+ * Returns a source-exact excerpt only when a non-instruction-like question has a lexical match.
+ * This deliberately does not infer rights, deadlines, or legal consequences from the document.
+ */
+export function answerGroundedQuestion(input: GroundedQuestionInput): GroundedAnswer {
+  if (requiresGroundedQuestionReview(input.question)) {
+    return { answer: null, citation: null, status: 'needs_human_review' };
+  }
+
+  const questionTokens = tokenSet(input.question);
+  let bestMatch: { id: string; score: number; text: string } | undefined;
+
+  for (const segment of input.document.segments) {
+    const score = [...tokenSet(segment.text)].filter((token) => questionTokens.has(token)).length;
+    if (
+      score > 0 &&
+      (bestMatch === undefined ||
+        score > bestMatch.score ||
+        (score === bestMatch.score && segment.id < bestMatch.id))
+    ) {
+      bestMatch = { id: segment.id, score, text: segment.text };
+    }
+  }
+
+  if (bestMatch === undefined) {
+    return { answer: null, citation: null, status: 'needs_human_review' };
+  }
+
+  return groundedAnswerSchema.parse({
+    answer: `The document states: “${bestMatch.text}”`,
+    citation: { segmentIds: [bestMatch.id] },
+    status: 'answered',
+  });
 }
 
 function missingFactKeys(grouped: ReadonlyMap<FactKey, readonly CaseFact[]>): FactKey[] {
