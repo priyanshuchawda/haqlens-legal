@@ -12,6 +12,7 @@ import {
   factExtractionInputSchema,
   officialSourceSchema,
   segmentedDocumentSchema,
+  transcriptionReviewSchema,
   routeDecisionSchema,
 } from './index';
 
@@ -171,6 +172,28 @@ describe('document citation contracts', () => {
     expect(
       documentTextInputSchema.safeParse({ sourceLabel: 'Offer letter', text: 'x', extra: 1 })
         .success,
+    ).toBe(false);
+  });
+});
+
+describe('review-gated transcription contracts', () => {
+  test('requires bounded, page-provenanced transcription before confirmation', () => {
+    expect(
+      transcriptionReviewSchema.parse({
+        confirmed: false,
+        sourceLabel: 'Scan',
+        pages: [{ page: 1, confidence: 0.82, text: 'Transcribed page text.' }],
+      }).confirmed,
+    ).toBe(false);
+    expect(
+      transcriptionReviewSchema.safeParse({
+        confirmed: false,
+        sourceLabel: 'Scan',
+        pages: [
+          { page: 1, confidence: 0.82, text: 'One.' },
+          { page: 1, confidence: 0.91, text: 'Two.' },
+        ],
+      }).success,
     ).toBe(false);
   });
 });

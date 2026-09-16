@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test';
 import { MAX_SEGMENT_CHARS } from '@h2s/contracts';
 
 import {
+  confirmedTranscriptionText,
   classifyUpload,
   compareSegmentedDocuments,
   MAX_UPLOAD_BYTES,
@@ -160,5 +161,21 @@ describe('secure file-intake classification', () => {
       accepted: false,
       reason: 'payload_too_large',
     });
+  });
+});
+
+describe('review-gated transcription use', () => {
+  test('withholds unconfirmed transcription and preserves confirmed page order', () => {
+    const review = {
+      sourceLabel: 'Scan',
+      pages: [
+        { page: 2, confidence: 0.7, text: 'Second page.' },
+        { page: 1, confidence: 0.8, text: 'First page.' },
+      ],
+    };
+    expect(confirmedTranscriptionText({ ...review, confirmed: false })).toBeNull();
+    expect(confirmedTranscriptionText({ ...review, confirmed: true })).toBe(
+      'First page.\n\nSecond page.',
+    );
   });
 });

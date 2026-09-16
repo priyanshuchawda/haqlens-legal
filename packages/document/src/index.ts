@@ -6,6 +6,7 @@ import {
   segmentedDocumentSchema,
   type SegmentedDocument,
   type DocumentTextInput,
+  type TranscriptionReview,
 } from '@h2s/contracts';
 
 function normaliseText(value: string): string {
@@ -69,6 +70,15 @@ export function segmentTextDocument(input: DocumentTextInput) {
       text: text.slice(range.start, range.end),
     })),
   });
+}
+
+/** Makes OCR/transcription usable only after explicit user confirmation, preserving page order. */
+export function confirmedTranscriptionText(review: TranscriptionReview): string | null {
+  if (!review.confirmed) return null;
+  return review.pages
+    .toSorted((left, right) => left.page - right.page)
+    .map((page) => page.text)
+    .join('\n\n');
 }
 
 export type RedactionKind = 'email' | 'phone' | 'government_id' | 'tax_id';
