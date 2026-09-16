@@ -271,4 +271,125 @@ describe('App component', () => {
       fetchSpy.restore();
     }
   });
+
+  test('renders a source-linked excerpt brief only when its source targets are preserved', async () => {
+    const user = userEvent.setup();
+    let responseNumber = 0;
+    const document = {
+      sourceLabel: 'Termination email',
+      text: 'Employment ended today.',
+      segments: [
+        {
+          id: 'segment-1',
+          page: null,
+          sourceStart: 0,
+          sourceEnd: 23,
+          text: 'Employment ended today.',
+        },
+      ],
+    };
+    const fetchSpy = spyOnFetch(async () => {
+      responseNumber += 1;
+      return responseNumber === 1
+        ? Response.json({
+            source: 'fixture',
+            safeMode: false,
+            facts: [
+              {
+                key: 'event_date',
+                value: '2026-02-10',
+                certainty: 'confirmed',
+                evidenceIds: ['evidence-1'],
+              },
+            ],
+          })
+        : Response.json({
+            document,
+            items: [
+              {
+                citation: { segmentIds: ['segment-1'] },
+                kind: 'summary',
+                severity: null,
+                text: 'Review this source excerpt before taking any next step.',
+              },
+            ],
+          });
+    });
+
+    try {
+      render(<App />);
+      await user.type(screen.getByLabelText('Source label'), document.sourceLabel);
+      await user.type(screen.getByLabelText('Evidence excerpt'), document.text);
+      await user.click(screen.getByRole('button', { name: 'Extract facts for review' }));
+      await screen.findByRole('heading', { name: 'Step 2 of 3: confirm facts' });
+      await user.click(screen.getByRole('button', { name: 'Create source-linked excerpt brief' }));
+
+      expect(
+        await screen.findByRole('heading', { name: 'Review the cited excerpt' }),
+      ).toBeDefined();
+      expect(
+        screen.getByText('Review this source excerpt before taking any next step.'),
+      ).toBeDefined();
+      expect(
+        screen.getByRole('link', { name: 'Termination email, excerpt 1' }).getAttribute('href'),
+      ).toBe('#brief-source-segment-1');
+      expect(screen.getAllByText('Employment ended today.')).toHaveLength(2);
+      expect(fetchSpy.requests()).toBe(2);
+    } finally {
+      fetchSpy.restore();
+    }
+  });
+
+  test('fails closed when a brief response substitutes its submitted source text', async () => {
+    const user = userEvent.setup();
+    let responseNumber = 0;
+    const fetchSpy = spyOnFetch(async () => {
+      responseNumber += 1;
+      return responseNumber === 1
+        ? Response.json({
+            source: 'fixture',
+            safeMode: false,
+            facts: [
+              {
+                key: 'event_date',
+                value: '2026-02-10',
+                certainty: 'confirmed',
+                evidenceIds: ['evidence-1'],
+              },
+            ],
+          })
+        : Response.json({
+            document: {
+              sourceLabel: 'Termination email',
+              text: 'Substituted source text.',
+              segments: [
+                {
+                  id: 'segment-1',
+                  page: null,
+                  sourceStart: 0,
+                  sourceEnd: 24,
+                  text: 'Substituted source text.',
+                },
+              ],
+            },
+            items: [],
+          });
+    });
+
+    try {
+      render(<App />);
+      await user.type(screen.getByLabelText('Source label'), 'Termination email');
+      await user.type(screen.getByLabelText('Evidence excerpt'), 'Employment ended today.');
+      await user.click(screen.getByRole('button', { name: 'Extract facts for review' }));
+      await screen.findByRole('heading', { name: 'Step 2 of 3: confirm facts' });
+      await user.click(screen.getByRole('button', { name: 'Create source-linked excerpt brief' }));
+
+      expect(
+        await screen.findByRole('heading', { name: 'Source-linked brief is unavailable' }),
+      ).toBeDefined();
+      expect(screen.queryByText('Substituted source text.')).toBeNull();
+    } finally {
+      fetchSpy.restore();
+    }
+  });
 });

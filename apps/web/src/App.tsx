@@ -1,5 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { segmentTextDocument } from '@h2s/document';
 import {
+  documentBriefFromResponse,
   extractionFromResponse,
   factKeys,
   normaliseEvidenceText,
@@ -7,11 +9,13 @@ import {
   retryAfterSeconds,
   routeFromResponse,
   type Fact,
+  type DocumentBrief,
   type RouteDecision,
 } from './api';
 
 type ExtractionState = 'idle' | 'submitting' | 'safe-mode' | 'rate-limited' | 'success';
 type RouteState = 'idle' | 'submitting' | 'safe-mode' | 'rate-limited' | 'success';
+type BriefState = 'idle' | 'submitting' | 'safe-mode' | 'success';
 const factLabel = (key: string) => key.replaceAll('_', ' ');
 type EvidenceDraft = Readonly<{ id: string; sourceLabel: string; excerpt: string }>;
 
@@ -25,13 +29,17 @@ export function App() {
   const [extraction, setExtraction] = useState<ExtractionState>('idle');
   const [route, setRoute] = useState<RouteDecision | null>(null);
   const [routeState, setRouteState] = useState<RouteState>('idle');
+  const [brief, setBrief] = useState<DocumentBrief | null>(null);
+  const [briefState, setBriefState] = useState<BriefState>('idle');
   const [formError, setFormError] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
   const [retryAfter, setRetryAfter] = useState<number | null>(null);
   const extractionController = useRef<AbortController | null>(null);
   const routeController = useRef<AbortController | null>(null);
+  const briefController = useRef<AbortController | null>(null);
   const extractionGeneration = useRef(0);
   const routeGeneration = useRef(0);
+  const briefGeneration = useRef(0);
   const clearSessionTrigger = useRef<HTMLButtonElement | null>(null);
   const clearAllDataButton = useRef<HTMLButtonElement | null>(null);
   const keepWorkingButton = useRef<HTMLButtonElement | null>(null);
@@ -168,7 +176,14 @@ export function App() {
     setExtraction('idle');
     setFacts([]);
     setSource(null);
+    invalidateBriefResult();
     invalidateRouteResult();
+  }
+  function invalidateBriefResult() {
+    briefController.current?.abort();
+    briefGeneration.current += 1;
+    setBriefState('idle');
+    setBrief(null);
   }
   function invalidateRouteResult() {
     routeController.current?.abort();
@@ -228,6 +243,51 @@ export function App() {
     }
     if (generation !== routeGeneration.current) return;
     setRouteState('safe-mode');
+  }
+  async function submitBrief() {
+    const preparedEvidence = normalisedEvidence();
+    const firstEvidence = preparedEvidence?.[0];
+    if (
+      firstEvidence === undefined ||
+      firstEvidence.sourceLabel === null ||
+      firstEvidence.excerpt === null
+    ) {
+      setBriefState('safe-mode');
+      return;
+    }
+    let document;
+    try {
+      document = segmentTextDocument({
+        sourceLabel: firstEvidence.sourceLabel,
+        text: firstEvidence.excerpt,
+      });
+    } catch {
+      setBriefState('safe-mode');
+      return;
+    }
+    briefController.current?.abort();
+    const generation = ++briefGeneration.current;
+    setBrief(null);
+    setBriefState('submitting');
+    const controller = new AbortController();
+    briefController.current = controller;
+    try {
+      const response = await fetch('/v1/briefs/document', {
+        ...privateJsonRequest(document),
+        signal: controller.signal,
+      });
+      if (generation !== briefGeneration.current) return;
+      const result = documentBriefFromResponse(await response.json(), document);
+      if (response.ok && result) {
+        setBrief(result);
+        setBriefState('success');
+        return;
+      }
+    } catch {
+      /* Fail closed without rendering transport or provider details. */
+    }
+    if (generation !== briefGeneration.current) return;
+    setBriefState('safe-mode');
   }
   return (
     <main className="shell" id="main-content">
@@ -451,10 +511,65 @@ export function App() {
               >
                 Add fact
               </button>{' '}
+              <button disabled={briefState === 'submitting'} type="button" onClick={submitBrief}>
+                {briefState === 'submitting'
+                  ? 'Creating source-linked brief…'
+                  : 'Create source-linked excerpt brief'}
+              </button>{' '}
               <button disabled={routeState === 'submitting'} type="button" onClick={submitRoute}>
                 {routeState === 'submitting' ? 'Checking route…' : 'Check preparation path'}
               </button>
             </div>
+          ) : null}
+          {briefState === 'safe-mode' ? (
+            <div className="safe-mode" role="status">
+              <h3>Source-linked brief is unavailable</h3>
+              <p>
+                No brief was generated. Keep the original excerpt and review it with qualified local
+                support if needed.
+              </p>
+            </div>
+          ) : null}
+          {briefState === 'success' && brief ? (
+            <section aria-labelledby="brief-title" className="document-brief">
+              <p className="source-status">Source-linked excerpt brief</p>
+              <h3 id="brief-title">Review the cited excerpt</h3>
+              <p>
+                This brief is limited to the first evidence excerpt. It is not legal advice and does
+                not replace the original document.
+              </p>
+              <ul>
+                {brief.items.map((item, index) => (
+                  <li key={`${item.kind}-${index}`}>
+                    <p>{item.text}</p>
+                    <p>
+                      Source:{' '}
+                      {item.citation.segmentIds.map((segmentId, citationIndex) => {
+                        const segmentIndex = brief.document.segments.findIndex(
+                          (segment) => segment.id === segmentId,
+                        );
+                        return (
+                          <span key={segmentId}>
+                            {citationIndex > 0 ? ', ' : null}
+                            <a href={`#brief-source-${segmentId}`}>
+                              {brief.document.sourceLabel}, excerpt {segmentIndex + 1}
+                            </a>
+                          </span>
+                        );
+                      })}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+              {brief.document.segments.map((segment, index) => (
+                <blockquote id={`brief-source-${segment.id}`} key={segment.id}>
+                  <p>
+                    {brief.document.sourceLabel}, excerpt {index + 1}
+                  </p>
+                  <p>{segment.text}</p>
+                </blockquote>
+              ))}
+            </section>
           ) : null}
           {routeState === 'safe-mode' ? (
             <div className="safe-mode" role="status">
