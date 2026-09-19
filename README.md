@@ -6,6 +6,8 @@ The MVP architecture and safety boundaries are in [the design specification](doc
 The bounded machine-readable endpoint contract is [OpenAPI](docs/openapi.json).
 Security controls are documented in [SECURITY.md](SECURITY.md), accessibility guidance in
 [ACCESSIBILITY.md](ACCESSIBILITY.md), and the contribution workflow in [CONTRIBUTING.md](CONTRIBUTING.md).
+The full challenge-to-feature and verification matrix is in
+[docs/CHALLENGE_ALIGNMENT.md](docs/CHALLENGE_ALIGNMENT.md).
 
 ## Chosen vertical
 
