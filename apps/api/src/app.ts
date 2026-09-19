@@ -24,7 +24,7 @@ import { answerGroundedQuestion, calculateConfirmedDate, routeCase } from '@haql
 import { compareSegmentedDocuments } from '@haqlens/document';
 import { resolveOfficialSources } from '@haqlens/official-sources';
 import { Hono, type Context } from 'hono';
-import { createRateLimiter, type RateLimiter } from './rate-limit';
+import { createRateLimiter, type RateLimiter } from './rate-limit.js';
 
 export const MAX_JSON_BYTES = 64 * 1024;
 export const MAX_TRANSCRIPTION_JSON_BYTES = 10 * 1024 * 1024;

@@ -45,3 +45,8 @@ bun run verify
 bun run build
 git diff --check
 ```
+
+## Hosted surface
+
+The public deployment is [haqlens-legal.vercel.app](https://haqlens-legal.vercel.app). The hosted
+default keeps Gemini disabled and does not accept a client-side provider key.

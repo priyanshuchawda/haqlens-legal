@@ -77,8 +77,8 @@ export function segmentTextDocument(input: DocumentTextInput) {
 export function confirmedTranscriptionText(review: TranscriptionReview | unknown): string | null {
   const parsed = transcriptionReviewSchema.parse(review);
   if (!parsed.confirmed) return null;
-  return parsed.pages
-    .toSorted((left, right) => left.page - right.page)
+  return [...parsed.pages]
+    .sort((left, right) => left.page - right.page)
     .map((page) => page.text)
     .join('\n\n');
 }
