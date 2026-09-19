@@ -29,7 +29,7 @@ The local release gate passes on `main`:
 - API and web production builds;
 - `git diff --check`.
 
-GitHub Actions remain intentionally disabled. GitGuardian is waived by project choice; the local secret scanner remains required.
+GitHub Actions runs the quality gate on pull requests and pushes to `main`. GitGuardian is waived by project choice; the local secret scanner remains required.
 
 ## Safe operating boundary
 

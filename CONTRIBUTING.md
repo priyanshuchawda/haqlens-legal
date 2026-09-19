@@ -11,7 +11,7 @@ HaqLens Legal uses small, reviewable changes with a clear user or safety outcome
 5. Run the local verification gate before merging.
 6. Merge the pull request, then delete the topic branch.
 
-GitHub Actions are intentionally disabled. The local gate is the source of truth:
+GitHub Actions runs the same quality gate on pull requests and pushes to `main`. The local gate is:
 
 ```sh
 bun run verify

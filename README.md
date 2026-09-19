@@ -67,6 +67,6 @@ bun run test:a11y
 bun run validate:openapi
 ```
 
-GitHub Actions are currently disabled by project choice. Every pull request records local checks,
-security/privacy impact, accessibility impact, and rollback information. GitGuardian is intentionally
-waived by project choice; local secret scanning remains required.
+GitHub Actions runs the quality gate on every pull request and push to `main`. Every pull request
+records local checks, security/privacy impact, accessibility impact, and rollback information.
+GitGuardian is intentionally waived by project choice; the local secret scanner remains required.
