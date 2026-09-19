@@ -9,7 +9,8 @@ import {
 import { z } from 'zod';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
-const DEFAULT_MODEL = 'gemini-2.5-flash';
+/** Fast, cost-conscious model suited to bounded document fact extraction. */
+const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 const MAX_MODEL_LENGTH = 128;
 const MAX_PROVIDER_RESPONSE_BYTES = 256 * 1024;
 const MAX_TIMEOUT_MS = 60_000;
