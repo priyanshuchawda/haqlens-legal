@@ -7,6 +7,38 @@ The bounded machine-readable endpoint contract is [OpenAPI](docs/openapi.json).
 Security controls are documented in [SECURITY.md](SECURITY.md), accessibility guidance in
 [ACCESSIBILITY.md](ACCESSIBILITY.md), and the contribution workflow in [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Chosen vertical
+
+HaqLens Legal focuses first on employment and freelancer document preparation in India: offer
+letters, contracts, termination notices, payment records, and related evidence. The same workflow
+also supports general legal documents through evidence-linked briefs, comparisons, questions, and
+official-source guidance.
+
+## Approach and decision logic
+
+The product follows a proof-to-path rule: every displayed fact keeps an evidence origin, while
+deterministic code handles segmentation, comparison, redaction, date arithmetic, validation, and
+safe routing. Gemini is used only for bounded extraction or explanation when explicitly enabled.
+It cannot invent citations, silently confirm transcription, choose an unsupported legal conclusion,
+or replace the rule-based safety boundary.
+
+## How it works
+
+1. The user enters evidence or classifies a local file in the browser.
+2. The API validates a bounded request and creates an ephemeral in-memory context.
+3. Evidence is segmented into labelled excerpts and facts are returned with provenance.
+4. Deterministic modules produce comparisons, confirmed dates, routes, redactions, and source links.
+5. Grounded questions and optional Gemini extraction return bounded, reviewable results.
+6. The user reviews citations and transcription before using or exporting a preparation packet.
+
+## Assumptions and boundaries
+
+- The user supplies truthful, relevant evidence and verifies names, amounts, dates, and citations.
+- Official-source links are information resources, not a substitute for professional legal advice.
+- The application is stateless by design; it does not provide accounts, case management, filing,
+  representation, deadline guarantees, or automated legal action.
+- Provider access is opt-in, server-side, bounded, and never receives a browser-held API key.
+
 ## Product capabilities
 
 | Capability       | Product behavior                                                                     |
