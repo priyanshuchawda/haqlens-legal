@@ -61,6 +61,13 @@ bun run dev:api
 bun run dev:web
 ```
 
+## Hosted deployment
+
+The public web deployment is [haqlens-legal.vercel.app](https://haqlens-legal.vercel.app).
+It serves the Vite application and the bounded Hono API from the same origin. Gemini remains
+disabled in the hosted default; enabling it requires a server-side `GEMINI_API_KEY` environment
+variable and an explicit provider configuration.
+
 `AI_PROVIDER=disabled` is the safe default. Gemini extraction is enabled only with
 `AI_PROVIDER=gemini` and a non-empty `GEMINI_API_KEY`; keep that key only in the ignored local
 `.env` file or an equivalent server-side secret store. Never put it in the web app, a commit, a
