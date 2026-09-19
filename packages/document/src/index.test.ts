@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { MAX_SEGMENT_CHARS } from '@h2s/contracts';
+import { MAX_SEGMENT_CHARS } from '@haqlens/contracts';
 
 import {
   confirmedTranscriptionText,

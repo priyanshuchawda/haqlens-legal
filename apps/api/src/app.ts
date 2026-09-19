@@ -17,12 +17,12 @@ import {
   type RouteDecision,
   transcriptionRequestSchema,
   transcriptionReviewSchema,
-} from '@h2s/contracts';
-import type { FactExtractor } from '@h2s/ai-gemini';
-import type { Transcriber } from '@h2s/ai-gemini';
-import { answerGroundedQuestion, calculateConfirmedDate, routeCase } from '@h2s/core';
-import { compareSegmentedDocuments } from '@h2s/document';
-import { resolveOfficialSources } from '@h2s/official-sources';
+} from '@haqlens/contracts';
+import type { FactExtractor } from '@haqlens/ai-gemini';
+import type { Transcriber } from '@haqlens/ai-gemini';
+import { answerGroundedQuestion, calculateConfirmedDate, routeCase } from '@haqlens/core';
+import { compareSegmentedDocuments } from '@haqlens/document';
+import { resolveOfficialSources } from '@haqlens/official-sources';
 import { Hono, type Context } from 'hono';
 import { createRateLimiter, type RateLimiter } from './rate-limit';
 

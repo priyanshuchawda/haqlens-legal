@@ -5,7 +5,7 @@ import {
   dateCalculationInputSchema,
   type CaseFact,
   type CaseInput,
-} from '@h2s/contracts';
+} from '@haqlens/contracts';
 
 import {
   answerGroundedQuestion,

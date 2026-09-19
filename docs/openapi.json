@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Employment and Freelancer First Aid API",
+    "title": "HaqLens Legal API",
     "version": "0.1.0",
     "description": "Legal-information preparation API. It does not provide legal advice. Evidence requests and responses are non-cacheable."
   },

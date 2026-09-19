@@ -1,6 +1,6 @@
 # Security and privacy
 
-H2S is designed for sensitive legal-information preparation. The default configuration keeps provider access server-side, avoids persistence, and treats uploaded material as user-controlled data.
+HaqLens Legal is designed for sensitive legal-information preparation. The default configuration keeps provider access server-side, avoids persistence, and treats uploaded material as user-controlled data.
 
 ## Current controls
 

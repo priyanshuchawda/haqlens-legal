@@ -1,6 +1,6 @@
-# Employment and Freelancer
+# HaqLens Legal
 
-H2S Legal First-Aid helps an Indian employee or freelancer prepare a clear, evidence-linked next-step packet. It provides legal information and preparation support, never legal advice or automated legal action.
+HaqLens Legal helps people in India prepare a clear, evidence-linked next-step packet. It provides legal information and preparation support, never legal advice or automated legal action.
 
 The MVP architecture and safety boundaries are in [the design specification](docs/superpowers/specs/2026-09-14-employment-first-aid-design.md).
 The bounded machine-readable endpoint contract is [OpenAPI](docs/openapi.json).

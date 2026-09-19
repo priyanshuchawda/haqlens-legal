@@ -1,5 +1,5 @@
 {
-  "name": "@h2s/api",
+  "name": "@haqlens/api",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,11 +8,11 @@
     "start": "bun src/server.ts"
   },
   "dependencies": {
-    "@h2s/ai-gemini": "workspace:*",
-    "@h2s/contracts": "workspace:*",
-    "@h2s/core": "workspace:*",
-    "@h2s/document": "workspace:*",
-    "@h2s/official-sources": "workspace:*",
+    "@haqlens/ai-gemini": "workspace:*",
+    "@haqlens/contracts": "workspace:*",
+    "@haqlens/core": "workspace:*",
+    "@haqlens/document": "workspace:*",
+    "@haqlens/official-sources": "workspace:*",
     "hono": "4.13.7",
     "zod": "4.6.5"
   }

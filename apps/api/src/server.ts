@@ -1,4 +1,4 @@
-import { createGeminiExtractor, createGeminiTranscriber } from '@h2s/ai-gemini';
+import { createGeminiExtractor, createGeminiTranscriber } from '@haqlens/ai-gemini';
 
 import { createApp, MAX_JSON_BYTES } from './app';
 import { clientKeyFromDirectPeer } from './client-key';

@@ -1,5 +1,5 @@
 {
-  "name": "@h2s/web",
+  "name": "@haqlens/web",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@h2s/document": "workspace:*",
+    "@haqlens/document": "workspace:*",
     "@vitejs/plugin-react": "6.1.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",

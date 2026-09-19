@@ -8,7 +8,7 @@ import {
   type SegmentedDocument,
   type DocumentTextInput,
   type TranscriptionReview,
-} from '@h2s/contracts';
+} from '@haqlens/contracts';
 
 function normaliseText(value: string): string {
   const text = value.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();

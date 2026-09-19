@@ -1,12 +1,12 @@
 {
-  "name": "@h2s/ai-gemini",
+  "name": "@haqlens/ai-gemini",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@h2s/contracts": "workspace:*",
+    "@haqlens/contracts": "workspace:*",
     "zod": "4.6.5"
   }
 }

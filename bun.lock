@@ -26,21 +26,21 @@
       },
     },
     "apps/api": {
-      "name": "@h2s/api",
+      "name": "@haqlens/api",
       "dependencies": {
-        "@h2s/ai-gemini": "workspace:*",
-        "@h2s/contracts": "workspace:*",
-        "@h2s/core": "workspace:*",
-        "@h2s/document": "workspace:*",
-        "@h2s/official-sources": "workspace:*",
+        "@haqlens/ai-gemini": "workspace:*",
+        "@haqlens/contracts": "workspace:*",
+        "@haqlens/core": "workspace:*",
+        "@haqlens/document": "workspace:*",
+        "@haqlens/official-sources": "workspace:*",
         "hono": "4.13.7",
         "zod": "4.6.5",
       },
     },
     "apps/web": {
-      "name": "@h2s/web",
+      "name": "@haqlens/web",
       "dependencies": {
-        "@h2s/document": "workspace:*",
+        "@haqlens/document": "workspace:*",
         "@vitejs/plugin-react": "6.1.1",
         "react": "19.3.0",
         "react-dom": "19.3.0",
@@ -53,34 +53,34 @@
       },
     },
     "packages/ai-gemini": {
-      "name": "@h2s/ai-gemini",
+      "name": "@haqlens/ai-gemini",
       "dependencies": {
-        "@h2s/contracts": "workspace:*",
+        "@haqlens/contracts": "workspace:*",
         "zod": "4.6.5",
       },
     },
     "packages/contracts": {
-      "name": "@h2s/contracts",
+      "name": "@haqlens/contracts",
       "dependencies": {
         "zod": "4.6.5",
       },
     },
     "packages/core": {
-      "name": "@h2s/core",
+      "name": "@haqlens/core",
       "dependencies": {
-        "@h2s/contracts": "workspace:*",
+        "@haqlens/contracts": "workspace:*",
       },
     },
     "packages/document": {
-      "name": "@h2s/document",
+      "name": "@haqlens/document",
       "dependencies": {
-        "@h2s/contracts": "workspace:*",
+        "@haqlens/contracts": "workspace:*",
       },
     },
     "packages/official-sources": {
-      "name": "@h2s/official-sources",
+      "name": "@haqlens/official-sources",
       "dependencies": {
-        "@h2s/contracts": "workspace:*",
+        "@haqlens/contracts": "workspace:*",
       },
     },
   },
@@ -141,19 +141,19 @@
 
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.7.3", "", { "dependencies": { "@eslint/core": "^1.2.1", "levn": "^0.4.1" } }, "sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q=="],
 
-    "@h2s/ai-gemini": ["@h2s/ai-gemini@workspace:packages/ai-gemini"],
+    "@haqlens/ai-gemini": ["@haqlens/ai-gemini@workspace:packages/ai-gemini"],
 
-    "@h2s/api": ["@h2s/api@workspace:apps/api"],
+    "@haqlens/api": ["@haqlens/api@workspace:apps/api"],
 
-    "@h2s/contracts": ["@h2s/contracts@workspace:packages/contracts"],
+    "@haqlens/contracts": ["@haqlens/contracts@workspace:packages/contracts"],
 
-    "@h2s/core": ["@h2s/core@workspace:packages/core"],
+    "@haqlens/core": ["@haqlens/core@workspace:packages/core"],
 
-    "@h2s/document": ["@h2s/document@workspace:packages/document"],
+    "@haqlens/document": ["@haqlens/document@workspace:packages/document"],
 
-    "@h2s/official-sources": ["@h2s/official-sources@workspace:packages/official-sources"],
+    "@haqlens/official-sources": ["@haqlens/official-sources@workspace:packages/official-sources"],
 
-    "@h2s/web": ["@h2s/web@workspace:apps/web"],
+    "@haqlens/web": ["@haqlens/web@workspace:apps/web"],
 
     "@humanfs/core": ["@humanfs/core@0.19.2", "", { "dependencies": { "@humanfs/types": "^0.15.0" } }, "sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA=="],
 

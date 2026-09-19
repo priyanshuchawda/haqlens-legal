@@ -1,8 +1,8 @@
-# Employment and Freelancer First-Aid MVP — Design
+# HaqLens Legal — Employment and Freelancer First-Aid Design
 
 ## 1. Decision and scope
 
-`h2s-legal-first-aid` is a private working repository, not a final brand.
+The product is branded HaqLens Legal.
 
 The first releasable vertical is **Employment and Freelancer First-Aid for India**. A person can submit an offer letter, contract, termination notice, payment record, or a plain-language account of events. The product returns an accessible, evidence-linked preparation packet:
 
