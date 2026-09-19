@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "h2s-legal-first-aid",
+      "name": "haqlens-legal",
       "devDependencies": {
         "@axe-core/playwright": "4.13.0",
         "@eslint/js": "10.0.1",
