@@ -1,5 +1,5 @@
 {
   "installCommand": "bun install --frozen-lockfile",
-  "buildCommand": "bun run build:web && bun build apps/api/src/app.ts --outfile api/app.js --target=node",
+  "buildCommand": "bun run build:web && bun build apps/api/src/vercel.ts --outfile api/app.js --target=node",
   "outputDirectory": "apps/web/dist"
 }
