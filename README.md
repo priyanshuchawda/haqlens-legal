@@ -23,10 +23,16 @@ browser environment variable, or evidence text.
 
 ## API privacy and deployment boundary
 
-The API exposes `POST /v1/extractions/facts` and `POST /v1/routes/prepare`. Both accept JSON only,
-have a 64 KiB request limit, and return `Cache-Control: no-store`. The browser also explicitly sends
-these evidence-bearing requests with `cache: 'no-store'`. The prototype does not persist evidence,
-facts, routes, uploads, accounts, or analytics data.
+The API exposes bounded extraction, routing, briefs, comparison, dates, grounded Q&A, reviewed
+official-source lookup, and opt-in transcription routes. Existing JSON routes have a 64 KiB request
+limit; transcription has a separate 10 MiB limit and remains review-only. All return
+`Cache-Control: no-store`. The browser also explicitly sends evidence-bearing requests with
+`cache: 'no-store'`. The prototype does not persist evidence, facts, routes, uploads, accounts, or
+analytics data.
+
+Text files can be classified and read locally. PDF/image files require the opt-in Gemini provider
+for transcription, and every provider result is returned unconfirmed until the user reviews it
+against the original page. The Gemini key is never sent to the browser.
 
 Anonymous write endpoints use an in-memory limit of 30 requests per peer per minute. A rejected
 request returns `429`, `{ "error": "rate_limited" }`, and `Retry-After`; it does not parse the body
@@ -49,5 +55,5 @@ bun run validate:openapi
 ```
 
 GitHub Actions are currently disabled by project choice. Every pull request records local checks,
-security/privacy impact, accessibility impact, and rollback information; GitGuardian remains the
-remote secret-scanning check.
+security/privacy impact, accessibility impact, and rollback information. GitGuardian is intentionally
+waived for this private prototype by project choice; local secret scanning remains required.
