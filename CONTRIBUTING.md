@@ -1,6 +1,6 @@
 # Contributing
 
-H2S uses small, reviewable changes with a clear user or safety outcome.
+HaqLens Legal uses small, reviewable changes with a clear user or safety outcome.
 
 ## Workflow
 

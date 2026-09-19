@@ -11,7 +11,7 @@ import {
   type GroundedAnswer,
   type GroundedQuestionInput,
   type RouteDecision,
-} from '@h2s/contracts';
+} from '@haqlens/contracts';
 
 const requiredFacts: readonly FactKey[] = [
   'case_category',

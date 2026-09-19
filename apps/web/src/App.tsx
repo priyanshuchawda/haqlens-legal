@@ -4,7 +4,7 @@ import {
   confirmedTranscriptionText,
   redactDirectIdentifiers,
   segmentTextDocument,
-} from '@h2s/document';
+} from '@haqlens/document';
 import {
   documentBriefFromResponse,
   documentComparisonFromResponse,
@@ -39,15 +39,15 @@ const onboardingCopy = {
     clear: 'Clear this session',
     lede: 'Turn a confusing work dispute into a clear, evidence-linked preparation packet.',
     notice:
-      'H2S provides legal information and preparation support, not legal advice. Your text is held only in this browser while you use this page.',
-    title: 'Employment and Freelancer First Aid',
+      'HaqLens provides legal information and preparation support, not legal advice. Your text is held only in this browser while you use this page.',
+    title: 'HaqLens Legal',
   },
   hi: {
     clear: 'यह सत्र साफ़ करें',
     lede: 'काम के जटिल विवाद को साक्ष्य-आधारित तैयारी पैकेट में बदलें।',
     notice:
-      'H2S कानूनी जानकारी और तैयारी में सहायता देता है, कानूनी सलाह नहीं। आपका पाठ इस ब्राउज़र में केवल इस सत्र के दौरान रहता है।',
-    title: 'रोज़गार और फ्रीलांसर प्राथमिक सहायता',
+      'HaqLens कानूनी जानकारी और तैयारी में सहायता देता है, कानूनी सलाह नहीं। आपका पाठ इस ब्राउज़र में केवल इस सत्र के दौरान रहता है।',
+    title: 'HaqLens Legal',
   },
 } as const;
 
@@ -640,7 +640,7 @@ export function App() {
     );
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'h2s-preparation-packet.txt';
+    anchor.download = 'haqlens-preparation-packet.txt';
     anchor.click();
     URL.revokeObjectURL(url);
   }

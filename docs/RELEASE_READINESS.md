@@ -1,4 +1,4 @@
-# H2S Legal First-Aid — Release Readiness
+# HaqLens Legal — Release Readiness
 
 ## What is finished
 

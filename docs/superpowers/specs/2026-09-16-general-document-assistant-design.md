@@ -2,7 +2,7 @@
 
 ## Decision
 
-H2S expands from Employment and Freelancer First-Aid into a **general Indian legal-document
+HaqLens Legal expands from Employment and Freelancer First-Aid into a **general Indian legal-document
 assistant**. The product may explain a document, compare two versions, identify document-backed
 risks, calculate clearly specified dates, answer grounded questions, and prepare a redacted
 handoff packet. It provides legal information and preparation support, never legal advice,

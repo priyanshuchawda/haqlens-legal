@@ -5,9 +5,7 @@ test('presents the safety boundary and a keyboard skip link', async ({ page }) =
   await page.goto('/');
 
   await expect(page).toHaveTitle('Employment First Aid');
-  await expect(
-    page.getByRole('heading', { name: 'Employment and Freelancer First Aid' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'HaqLens Legal' })).toBeVisible();
   await expect(
     page.getByText('legal information and preparation support, not legal advice'),
   ).toBeVisible();

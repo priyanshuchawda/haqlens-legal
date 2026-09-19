@@ -3,7 +3,7 @@ import {
   officialSourceTopicSchema,
   type OfficialSource,
   type OfficialSourceTopic,
-} from '@h2s/contracts';
+} from '@haqlens/contracts';
 
 const allowedHosts = new Set(['consumerhelpline.gov.in', 'nalsa.gov.in', 'samadhan.labour.gov.in']);
 

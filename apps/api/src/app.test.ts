@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { createFixtureExtractor } from '@h2s/ai-gemini';
+import { createFixtureExtractor } from '@haqlens/ai-gemini';
 
 import { app, createApp, MAX_JSON_BYTES } from './app';
 import { ConfigurationError, loadRuntimeConfig } from './config';
