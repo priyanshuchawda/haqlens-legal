@@ -664,6 +664,11 @@ export function App() {
         </label>
         <h1 id="page-title">{onboardingCopy[language].title}</h1>
         <p className="lede">{onboardingCopy[language].lede}</p>
+        <ul className="capability-list" aria-label="What HaqLens can help with">
+          <li>Explain documents and evidence in plain language</li>
+          <li>Compare versions and highlight obligations, risks, and inconsistencies</li>
+          <li>Prepare questions, checklists, deadlines, and next steps for a lawyer</li>
+        </ul>
         <p className="notice" role="note">
           {onboardingCopy[language].notice}
         </p>
@@ -1340,6 +1345,7 @@ export function App() {
       </section>
       <footer className="site-footer" aria-label="HaqLens Legal information">
         <p>HaqLens provides legal information and preparation support, not legal advice.</p>
+        <a href="/accessibility.html">Accessibility statement</a>{' '}
         <a href="https://github.com/priyanshuchawda/haqlens-legal" rel="noreferrer" target="_blank">
           Source code and documentation
         </a>
