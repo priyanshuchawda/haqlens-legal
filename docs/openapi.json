@@ -3,7 +3,7 @@
   "info": {
     "title": "Employment and Freelancer First Aid API",
     "version": "0.1.0",
-    "description": "Prototype legal-information preparation API. It does not provide legal advice. Evidence requests and responses are non-cacheable."
+    "description": "Legal-information preparation API. It does not provide legal advice. Evidence requests and responses are non-cacheable."
   },
   "paths": {
     "/health": { "get": { "responses": { "200": { "description": "Service is available" } } } },

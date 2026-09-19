@@ -230,7 +230,7 @@ Each item is a separately reviewable issue and pull request.
 Items 1–9 are implemented on `main` through separately merged issues and pull requests. Item 10
 is release hardening: the current product has English/Hindi safety-boundary copy, keyboard and
 accessibility checks, local redaction, no-persistence controls, and browser evidence, but a final
-human review of copy parity and a release/demo report remains before public deployment.
+human review of copy parity and a release validation report remains before public deployment.
 
 Uploads are intentionally after text-first contracts, citations, and action packet behavior. This
 lets the most sensitive attack surface reuse tested boundaries rather than forcing product logic

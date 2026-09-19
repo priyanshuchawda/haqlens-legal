@@ -39,14 +39,14 @@ const onboardingCopy = {
     clear: 'Clear this session',
     lede: 'Turn a confusing work dispute into a clear, evidence-linked preparation packet.',
     notice:
-      'This tool provides legal information and preparation support, not legal advice. Your text is held only in this browser while you use this page; document upload is not enabled.',
+      'H2S provides legal information and preparation support, not legal advice. Your text is held only in this browser while you use this page.',
     title: 'Employment and Freelancer First Aid',
   },
   hi: {
     clear: 'यह सत्र साफ़ करें',
     lede: 'काम के जटिल विवाद को साक्ष्य-आधारित तैयारी पैकेट में बदलें।',
     notice:
-      'यह उपकरण कानूनी जानकारी और तैयारी में सहायता देता है, कानूनी सलाह नहीं। आपका पाठ इस ब्राउज़र में केवल इस सत्र के दौरान रहता है; दस्तावेज़ अपलोड सक्षम नहीं है।',
+      'H2S कानूनी जानकारी और तैयारी में सहायता देता है, कानूनी सलाह नहीं। आपका पाठ इस ब्राउज़र में केवल इस सत्र के दौरान रहता है।',
     title: 'रोज़गार और फ्रीलांसर प्राथमिक सहायता',
   },
 } as const;
@@ -650,7 +650,7 @@ export function App() {
         Skip to evidence form
       </a>
       <section aria-labelledby="page-title" className="hero">
-        <p className="eyebrow">Private prototype</p>
+        <p className="eyebrow">Legal information workspace</p>
         <label>
           Language
           <select
