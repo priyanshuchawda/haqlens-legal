@@ -5,7 +5,12 @@ import {
   type OfficialSourceTopic,
 } from '@haqlens/contracts';
 
-const allowedHosts = new Set(['consumerhelpline.gov.in', 'nalsa.gov.in', 'samadhan.labour.gov.in']);
+const allowedHosts = new Set([
+  'consumerhelpline.gov.in',
+  'nalsa.gov.in',
+  'pgportal.gov.in',
+  'samadhan.labour.gov.in',
+]);
 
 const manifest: readonly OfficialSource[] = [
   {
@@ -31,6 +36,14 @@ const manifest: readonly OfficialSource[] = [
     title: 'National Consumer Helpline',
     topics: ['consumer_dispute'],
     url: 'https://consumerhelpline.gov.in/public/',
+  },
+  {
+    authority: 'Government of India',
+    id: 'official-cpgrams-public-grievance',
+    reviewedOn: '2026-09-17',
+    title: 'CPGRAMS public grievance portal',
+    topics: ['public_grievance'],
+    url: 'https://pgportal.gov.in/',
   },
 ];
 
