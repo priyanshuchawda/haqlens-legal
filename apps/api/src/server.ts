@@ -1,4 +1,4 @@
-import { createGeminiExtractor } from '@h2s/ai-gemini';
+import { createGeminiExtractor, createGeminiTranscriber } from '@h2s/ai-gemini';
 
 import { createApp, MAX_JSON_BYTES } from './app';
 import { clientKeyFromDirectPeer } from './client-key';
@@ -10,6 +10,7 @@ const app =
     ? createApp({
         extractionSource: 'gemini',
         factExtractor: createGeminiExtractor({ apiKey: config.GEMINI_API_KEY }),
+        transcriber: createGeminiTranscriber({ apiKey: config.GEMINI_API_KEY }),
       })
     : createApp();
 

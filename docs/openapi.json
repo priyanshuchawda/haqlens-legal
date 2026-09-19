@@ -196,6 +196,35 @@
           "429": { "description": "Rate limited; Retry-After is set" }
         }
       }
+    },
+    "/v1/transcriptions": {
+      "post": {
+        "description": "Transcribe an accepted PDF/image through the opt-in provider. The response is always unconfirmed and must be reviewed by the user before analysis. No document is persisted.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TranscriptionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Unconfirmed page transcription",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TranscriptionReview" }
+              }
+            }
+          },
+          "400": { "description": "Invalid JSON" },
+          "413": { "description": "Payload too large" },
+          "415": { "description": "JSON required" },
+          "422": { "description": "Invalid transcription request" },
+          "429": { "description": "Rate limited; Retry-After is set" },
+          "503": { "description": "Transcription unavailable or provider failure" }
+        }
+      }
     }
   },
   "components": {
@@ -359,6 +388,49 @@
         },
         "additionalProperties": false,
         "description": "answered requires a non-null answer and citation; needs_human_review requires both to be null. A returned citation always references the submitted document."
+      },
+      "TranscriptionRequest": {
+        "type": "object",
+        "required": ["dataBase64", "mimeType", "sourceLabel"],
+        "properties": {
+          "dataBase64": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 14000000,
+            "pattern": "^[A-Za-z0-9+/]+={0,2}$"
+          },
+          "mimeType": {
+            "type": "string",
+            "enum": ["application/pdf", "image/jpeg", "image/png", "image/webp"]
+          },
+          "sourceLabel": { "type": "string", "minLength": 1, "maxLength": 200 }
+        },
+        "additionalProperties": false
+      },
+      "TranscriptionReview": {
+        "type": "object",
+        "required": ["confirmed", "pages", "sourceLabel"],
+        "properties": {
+          "confirmed": { "type": "boolean" },
+          "sourceLabel": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "pages": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 250,
+            "items": {
+              "type": "object",
+              "required": ["confidence", "page", "text"],
+              "properties": {
+                "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+                "page": { "type": "integer", "minimum": 1 },
+                "text": { "type": "string", "minLength": 1, "maxLength": 60000 }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false,
+        "description": "confirmed is always false for provider output and must be set only after user review."
       }
     }
   }

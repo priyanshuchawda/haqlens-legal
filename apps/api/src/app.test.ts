@@ -631,3 +631,63 @@ describe('reviewed official source API boundary', () => {
     expect(await response.json()).toEqual({ error: 'invalid_request' });
   });
 });
+
+describe('transcription API boundary', () => {
+  const input = {
+    dataBase64: 'c2Nhbi1ieXRlcw==',
+    mimeType: 'image/png',
+    sourceLabel: 'Scan',
+  } as const;
+
+  test('fails closed when transcription is not explicitly enabled', async () => {
+    const response = await app.request('/v1/transcriptions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: 'transcription_unavailable' });
+  });
+
+  test('returns only an unconfirmed review result from an injected transcriber', async () => {
+    const transcriberApp = createApp({
+      transcriber: {
+        transcribe: async () => ({
+          confirmed: false,
+          sourceLabel: 'Scan',
+          pages: [{ page: 1, confidence: 0.8, text: 'Scan text.' }],
+        }),
+      },
+    });
+    const response = await transcriberApp.request('/v1/transcriptions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      confirmed: false,
+      sourceLabel: 'Scan',
+      pages: [{ page: 1, confidence: 0.8, text: 'Scan text.' }],
+    });
+  });
+
+  test('rejects invalid transcription input before invoking a provider', async () => {
+    let calls = 0;
+    const transcriberApp = createApp({
+      transcriber: {
+        transcribe: async () => {
+          calls += 1;
+          throw new Error('must not run');
+        },
+      },
+    });
+    const response = await transcriberApp.request('/v1/transcriptions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...input, mimeType: 'text/plain' }),
+    });
+    expect(response.status).toBe(422);
+    expect(calls).toBe(0);
+  });
+});
