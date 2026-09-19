@@ -64,7 +64,9 @@ bun run dev:web
 ## Hosted deployment
 
 The public web deployment is [haqlens-legal.vercel.app](https://haqlens-legal.vercel.app).
-It serves the Vite application and the bounded Hono API from the same origin. Gemini remains
+It serves the Vite application and the bounded Hono API from the same origin. The hosted health
+endpoint is available at `/api/health`; interactive API routes remain deployment-gated until the
+provider’s nested-function routing is finalized. Gemini remains
 disabled in the hosted default; enabling it requires a server-side `GEMINI_API_KEY` environment
 variable and an explicit provider configuration.
 
