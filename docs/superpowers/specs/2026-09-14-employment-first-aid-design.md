@@ -189,4 +189,4 @@ GitHub Actions are not enabled initially. Local gates and recorded PR evidence a
 
 ## 13. Definition of done for the MVP
 
-The demo must run locally with a deterministic provider fixture and with Gemini configured. It must demonstrate one realistic synthetic employment dispute, cite all displayed facts, reject unsafe uploads, recover safely from provider failure, pass the quality gate, and make its legal-information boundary unmistakable. No claim is made that the product gives legal advice or is ready for public production use.
+The release validation must run locally with a deterministic provider fixture and with Gemini configured. It must cover one realistic synthetic employment dispute, cite all displayed facts, reject unsafe uploads, recover safely from provider failure, pass the quality gate, and make its legal-information boundary unmistakable. No claim is made that the product gives legal advice; public deployment remains subject to product and legal review.

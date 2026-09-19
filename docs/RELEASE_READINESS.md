@@ -2,7 +2,7 @@
 
 ## What is finished
 
-This private prototype is a complete, locally verifiable document-preparation workflow for Indian users. It supports:
+This is a complete, locally verifiable document-preparation workflow for Indian users. It supports:
 
 - source-exact evidence segmentation and citations;
 - reviewed official-support links;
@@ -29,11 +29,11 @@ The local release gate passes on `main`:
 - API and web production builds;
 - `git diff --check`.
 
-GitHub Actions remain intentionally disabled. GitGuardian is waived for this private prototype by project choice; the local secret scanner remains required.
+GitHub Actions remain intentionally disabled. GitGuardian is waived by project choice; the local secret scanner remains required.
 
 ## Safe operating boundary
 
-The product is legal-information preparation support, not legal advice, legal representation, deadline determination, or automated filing. Provider output is evidence-bound and transcription remains unconfirmed until the user checks it against the original. No document, result, account, or analytics data is persisted by the prototype.
+The product is legal-information preparation support, not legal advice, legal representation, deadline determination, or automated filing. Provider output is evidence-bound and transcription remains unconfirmed until the user checks it against the original. No document, result, account, or analytics data is persisted.
 
 ## Local release command
 

@@ -1,6 +1,6 @@
 # Employment and Freelancer
 
-A private prototype that helps an Indian employee or freelancer prepare a clear, evidence-linked next-step packet. It provides legal information and preparation support, never legal advice or automated legal action.
+H2S Legal First-Aid helps an Indian employee or freelancer prepare a clear, evidence-linked next-step packet. It provides legal information and preparation support, never legal advice or automated legal action.
 
 The MVP architecture and safety boundaries are in [the design specification](docs/superpowers/specs/2026-09-14-employment-first-aid-design.md).
 The bounded machine-readable endpoint contract is [OpenAPI](docs/openapi.json).
@@ -27,7 +27,7 @@ The API exposes bounded extraction, routing, briefs, comparison, dates, grounded
 official-source lookup, and opt-in transcription routes. Existing JSON routes have a 64 KiB request
 limit; transcription has a separate 10 MiB limit and remains review-only. All return
 `Cache-Control: no-store`. The browser also explicitly sends evidence-bearing requests with
-`cache: 'no-store'`. The prototype does not persist evidence, facts, routes, uploads, accounts, or
+`cache: 'no-store'`. The application does not persist evidence, facts, routes, uploads, accounts, or
 analytics data.
 
 Text files can be classified and read locally. PDF/image files require the opt-in Gemini provider
@@ -56,4 +56,4 @@ bun run validate:openapi
 
 GitHub Actions are currently disabled by project choice. Every pull request records local checks,
 security/privacy impact, accessibility impact, and rollback information. GitGuardian is intentionally
-waived for this private prototype by project choice; local secret scanning remains required.
+waived by project choice; local secret scanning remains required.
