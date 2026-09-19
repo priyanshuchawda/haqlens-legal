@@ -1,8 +1,6 @@
 import { handle } from 'hono/vercel';
 
-import { createApp } from './app.js';
-
-const app = createApp();
+import { app } from './app.js';
 export const config = { runtime: 'edge' };
 const honoHandler = handle(app);
 
