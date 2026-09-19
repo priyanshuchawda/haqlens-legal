@@ -4,6 +4,19 @@ H2S Legal First-Aid helps an Indian employee or freelancer prepare a clear, evid
 
 The MVP architecture and safety boundaries are in [the design specification](docs/superpowers/specs/2026-09-14-employment-first-aid-design.md).
 The bounded machine-readable endpoint contract is [OpenAPI](docs/openapi.json).
+Security controls are documented in [SECURITY.md](SECURITY.md), accessibility guidance in
+[ACCESSIBILITY.md](ACCESSIBILITY.md), and the contribution workflow in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Product capabilities
+
+| Capability       | Product behavior                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------ |
+| Evidence         | Deterministic segmentation with source labels and stable citations                   |
+| Preparation      | Briefs, comparisons, grounded questions, redacted packets, and confirmed date checks |
+| Official support | Reviewed links from the local official-source manifest                               |
+| Documents        | Safe local text intake plus review-gated PDF/image transcription                     |
+| Languages        | English and Hindi safety-boundary onboarding                                         |
+| Privacy          | No persistence, no browser API key, bounded payloads, and no-store responses         |
 
 ## Local development
 
