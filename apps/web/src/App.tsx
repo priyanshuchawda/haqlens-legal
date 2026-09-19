@@ -178,7 +178,7 @@ export function App() {
     const controller = new AbortController();
     extractionController.current = controller;
     try {
-      const response = await fetch('/v1/extractions/facts', {
+      const response = await fetch('/api/v1/extractions/facts', {
         ...privateJsonRequest({ evidence: preparedEvidence }),
         signal: controller.signal,
       });
@@ -316,7 +316,7 @@ export function App() {
   async function loadOfficialSources() {
     setOfficialSources(null);
     try {
-      const response = await fetch(`/v1/sources/${sourceTopic}`, { cache: 'no-store' });
+      const response = await fetch(`/api/v1/sources/${sourceTopic}`, { cache: 'no-store' });
       const sources = officialSourcesFromResponse(await response.json());
       if (response.ok && sources) setOfficialSources(sources);
     } catch {
@@ -363,7 +363,7 @@ export function App() {
     const controller = new AbortController();
     routeController.current = controller;
     try {
-      const response = await fetch('/v1/routes/prepare', {
+      const response = await fetch('/api/v1/routes/prepare', {
         ...privateJsonRequest({ evidence: preparedEvidence, facts }),
         signal: controller.signal,
       });
@@ -414,7 +414,7 @@ export function App() {
     const controller = new AbortController();
     briefController.current = controller;
     try {
-      const response = await fetch('/v1/briefs/document', {
+      const response = await fetch('/api/v1/briefs/document', {
         ...privateJsonRequest(document),
         signal: controller.signal,
       });
@@ -467,7 +467,7 @@ export function App() {
     const controller = new AbortController();
     comparisonController.current = controller;
     try {
-      const response = await fetch('/v1/comparisons/document', {
+      const response = await fetch('/api/v1/comparisons/document', {
         ...privateJsonRequest({ left, right }),
         signal: controller.signal,
       });
@@ -533,7 +533,7 @@ export function App() {
     const controller = new AbortController();
     dateController.current = controller;
     try {
-      const response = await fetch('/v1/dates/calculate', {
+      const response = await fetch('/api/v1/dates/calculate', {
         ...privateJsonRequest(input),
         signal: controller.signal,
       });
@@ -580,7 +580,7 @@ export function App() {
     const controller = new AbortController();
     questionController.current = controller;
     try {
-      const response = await fetch('/v1/questions/document', {
+      const response = await fetch('/api/v1/questions/document', {
         ...privateJsonRequest({ document, question: question.trim() }),
         signal: controller.signal,
       });

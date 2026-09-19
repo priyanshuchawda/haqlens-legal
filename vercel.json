@@ -1,6 +1,5 @@
 {
   "installCommand": "bun install --frozen-lockfile",
-  "buildCommand": "bun run build:web",
-  "outputDirectory": "apps/web/dist",
-  "rewrites": [{ "source": "/v1/:path*", "destination": "/api" }]
+  "buildCommand": "bun run build:web && bun build apps/api/src/app.ts --outfile api/app.js --target=node",
+  "outputDirectory": "apps/web/dist"
 }
