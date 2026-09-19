@@ -37,14 +37,14 @@ type EvidenceDraft = Readonly<{ id: string; sourceLabel: string; excerpt: string
 const onboardingCopy = {
   en: {
     clear: 'Clear this session',
-    lede: 'Turn a confusing work dispute into a clear, evidence-linked preparation packet.',
+    lede: 'Understand a confusing legal document or dispute and prepare a clear, evidence-linked packet for professional support.',
     notice:
       'HaqLens provides legal information and preparation support, not legal advice. Your text is held only in this browser while you use this page.',
     title: 'HaqLens Legal',
   },
   hi: {
     clear: 'यह सत्र साफ़ करें',
-    lede: 'काम के जटिल विवाद को साक्ष्य-आधारित तैयारी पैकेट में बदलें।',
+    lede: 'जटिल कानूनी दस्तावेज़ या विवाद को पेशेवर सहायता के लिए स्पष्ट, साक्ष्य-आधारित तैयारी पैकेट में बदलें।',
     notice:
       'HaqLens कानूनी जानकारी और तैयारी में सहायता देता है, कानूनी सलाह नहीं। आपका पाठ इस ब्राउज़र में केवल इस सत्र के दौरान रहता है।',
     title: 'HaqLens Legal',
@@ -649,7 +649,7 @@ export function App() {
       <a className="skip-link" href="#evidence-form">
         Skip to evidence form
       </a>
-      <section aria-labelledby="page-title" className="hero">
+      <header aria-labelledby="page-title" className="hero">
         <p className="eyebrow">Legal information workspace</p>
         <label>
           Language
@@ -702,7 +702,7 @@ export function App() {
             </ul>
           ) : null}
         </section>
-      </section>
+      </header>
       {confirmClear ? (
         <div className="confirm-backdrop">
           <section
@@ -1338,6 +1338,12 @@ export function App() {
           ) : null}
         </section>
       </section>
+      <footer className="site-footer" aria-label="HaqLens Legal information">
+        <p>HaqLens provides legal information and preparation support, not legal advice.</p>
+        <a href="https://github.com/priyanshuchawda/haqlens-legal" rel="noreferrer" target="_blank">
+          Source code and documentation
+        </a>
+      </footer>
     </main>
   );
 }
