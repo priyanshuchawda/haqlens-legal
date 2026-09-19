@@ -33,6 +33,18 @@ export const transcriptionReviewSchema = z
     context.addIssue({ code: 'custom', message: 'A transcription must not repeat a page number.' });
   });
 
+export const transcriptionRequestSchema = z
+  .object({
+    dataBase64: z
+      .string()
+      .min(4)
+      .max(14_000_000)
+      .regex(/^[A-Za-z0-9+/]+={0,2}$/u),
+    mimeType: z.enum(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']),
+    sourceLabel: z.string().trim().min(1).max(200),
+  })
+  .strict();
+
 export const documentSegmentSchema = z
   .object({
     id: boundedIdentifierSchema.regex(/^segment-[1-9]\d*$/u),
@@ -485,6 +497,7 @@ export type CaseInput = z.infer<typeof caseInputSchema>;
 export type DocumentSegment = z.infer<typeof documentSegmentSchema>;
 export type DocumentTextInput = z.infer<typeof documentTextInputSchema>;
 export type TranscriptionReview = z.infer<typeof transcriptionReviewSchema>;
+export type TranscriptionRequest = z.infer<typeof transcriptionRequestSchema>;
 export type Evidence = z.infer<typeof evidenceSchema>;
 export type DocumentBrief = z.infer<typeof documentBriefSchema>;
 export type DocumentComparison = z.infer<typeof documentComparisonSchema>;

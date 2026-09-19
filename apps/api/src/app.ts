@@ -15,8 +15,11 @@ import {
   officialSourceTopicSchema,
   type CaseInput,
   type RouteDecision,
+  transcriptionRequestSchema,
+  transcriptionReviewSchema,
 } from '@h2s/contracts';
 import type { FactExtractor } from '@h2s/ai-gemini';
+import type { Transcriber } from '@h2s/ai-gemini';
 import { answerGroundedQuestion, calculateConfirmedDate, routeCase } from '@h2s/core';
 import { compareSegmentedDocuments } from '@h2s/document';
 import { resolveOfficialSources } from '@h2s/official-sources';
@@ -42,6 +45,7 @@ type AppDependencies = Readonly<{
   factExtractor?: FactExtractor;
   route?: Route;
   rateLimiter?: RateLimiter;
+  transcriber?: Transcriber;
 }>;
 
 type RuntimeBindings = Readonly<{ clientKey?: string }>;
@@ -89,6 +93,7 @@ export function createApp({
     now: Date.now,
     windowMs: 60_000,
   }),
+  transcriber,
 }: AppDependencies = {}) {
   const application = new Hono<{ Bindings: RuntimeBindings }>();
 
@@ -229,6 +234,21 @@ export function createApp({
     const topic = officialSourceTopicSchema.safeParse(context.req.param('topic'));
     if (!topic.success) return context.json({ error: 'invalid_request' }, 422);
     return context.json({ sources: resolveOfficialSources(topic.data), topic: topic.data });
+  });
+
+  application.post('/v1/transcriptions', async (context) => {
+    const parsed = await parseBoundedJson(context, MAX_TRANSCRIPTION_JSON_BYTES);
+    if (hasResponse(parsed)) return parsed.response;
+    const input = transcriptionRequestSchema.safeParse(parsed.payload);
+    if (!input.success) return context.json({ error: 'invalid_request' }, 422);
+    if (transcriber === undefined) return context.json({ error: 'transcription_unavailable' }, 503);
+    try {
+      return context.json(
+        transcriptionReviewSchema.parse(await transcriber.transcribe(input.data)),
+      );
+    } catch {
+      return context.json({ error: 'transcription_unavailable' }, 503);
+    }
   });
 
   application.notFound((context) => context.json({ error: 'not_found' }, 404));

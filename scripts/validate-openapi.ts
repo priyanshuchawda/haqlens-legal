@@ -9,6 +9,7 @@ const expectedPaths = [
   '/v1/questions/document',
   '/v1/routes/prepare',
   '/v1/sources/{topic}',
+  '/v1/transcriptions',
 ];
 
 if (
